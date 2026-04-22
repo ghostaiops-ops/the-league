@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The League — Rreal Tacos</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0D1117;
+    --surface: #161B22;
+    --surface2: #1C2128;
+    --border: #30363D;
+    --red: #E3252B;
+    --gold: #F5A623;
+    --green: #2EA043;
+    --yellow: #D29922;
+    --blue: #388BFD;
+    --text: #E6EDF3;
+    --muted: #8B949E;
+    --green-badge: #0D4429;
+    --yellow-badge: #3D2F00;
+    --red-badge: #4A0F10;
+  }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: linear-gradient(135deg, #0D1117 0%, #1a0a0a 50%, #0D1117 100%); border-bottom: 2px solid var(--red); padding: 20px 24px; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 16px; }
+  .ghost-avatar { width: 52px; height: 52px; background: var(--red); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 0 20px rgba(227,37,43,0.5); animation: pulse 3s infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 20px rgba(227,37,43,0.5)} 50%{box-shadow:0 0 35px rgba(227,37,43,0.8)} }
+  .brand-text h1 { font-size: 28px; font-weight: 900; letter-spacing: 3px; color: #fff; text-transform: uppercase; }
+  .brand-text .season { font-size: 13px; color: var(--muted); letter-spacing: 2px; margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .tagline { font-size: 12px; color: var(--muted); font-style: italic; text-align: right; }
+  .tagline strong { color: var(--red); font-style: normal; }
+  .countdown { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; text-align: center; }
+  .countdown .label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .countdown .time { font-size: 20px; font-weight: 900; color: var(--gold); letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+  .btn-challenge { background: var(--gold); color: #000; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 800; font-size: 14px; letter-spacing: 1px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
+  .btn-challenge:hover { background: #ffbe3d; transform: translateY(-1px); box-shadow: 0 4px 15px rgba(245,166,35,0.4); }
+
+  /* TABS */
+  .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; }
+  .tab { padding: 14px 20px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; letter-spacing: 0.5px; text-transform: uppercase; transition: all 0.2s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--red); border-bottom-color: var(--red); }
+
+  /* MAIN */
+  .main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* CHALLENGE BANNER */
+  .challenge-banner { background: linear-gradient(135deg, #1a1000, #2d1f00); border: 1px solid var(--gold); border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; }
+  .challenge-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .challenge-badge { background: var(--gold); color: #000; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 4px; letter-spacing: 1px; }
+  .challenge-title { font-size: 18px; font-weight: 800; color: var(--gold); }
+  .challenge-desc { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  .challenge-progress { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+  .cp-item { background: rgba(0,0,0,0.3); border-radius: 6px; padding: 8px 10px; }
+  .cp-name { font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  .cp-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .cp-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .cp-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+  .cp-label { font-size: 11px; font-weight: 700; width: 28px; text-align: right; }
+
+  /* LEADERBOARD */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .section-title { font-size: 14px; font-weight: 700; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .live-dot { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--green); }
+  .live-dot::before { content: ''; width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: blink 1.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .leaderboard { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .lb-row { display: grid; grid-template-columns: 52px 1fr 90px 280px 80px 120px 80px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; gap: 8px; }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row:hover { background: var(--surface2); }
+  .lb-row.top1 { background: linear-gradient(90deg, rgba(245,166,35,0.08) 0%, transparent 100%); }
+  .lb-row.top2 { background: linear-gradient(90deg, rgba(192,192,192,0.05) 0%, transparent 100%); }
+  .lb-row.top3 { background: linear-gradient(90deg, rgba(205,127,50,0.05) 0%, transparent 100%); }
+  .lb-header { background: var(--surface2); color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: default; padding: 10px 16px; }
+  .lb-header:hover { background: var(--surface2); }
+  .rank { font-size: 20px; text-align: center; font-weight: 900; }
+  .rank-num { font-size: 13px; color: var(--muted); font-weight: 700; }
+  .loc-name { font-size: 15px; font-weight: 700; }
+  .loc-name .sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .pts { font-size: 22px; font-weight: 900; color: var(--gold); text-align: center; }
+  .pts .max { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .badges { display: flex; flex-wrap: wrap; gap: 4px; }
+  .badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+  .badge.g { background: var(--green-badge); color: #3fb950; border: 1px solid rgba(46,160,67,0.3); }
+  .badge.y { background: var(--yellow-badge); color: #d29922; border: 1px solid rgba(210,153,34,0.3); }
+  .badge.r { background: var(--red-badge); color: #f85149; border: 1px solid rgba(248,81,73,0.3); }
+  .wow { font-size: 13px; font-weight: 700; text-align: center; }
+  .wow.up { color: #3fb950; }
+  .wow.dn { color: #f85149; }
+  .wow.flat { color: var(--muted); }
+  .streak { font-size: 12px; font-weight: 600; }
+  .sparkline { display: flex; align-items: flex-end; gap: 3px; height: 28px; }
+  .spark-bar { width: 14px; border-radius: 2px 2px 0 0; background: var(--blue); opacity: 0.7; transition: opacity 0.2s; }
+  .lb-row:hover .spark-bar { opacity: 1; }
+
+  /* POWER RANKINGS */
+  .pr-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+  .pr-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .pr-ghost { font-size: 32px; }
+  .pr-title { font-size: 20px; font-weight: 900; letter-spacing: 2px; }
+  .pr-subtitle { font-size: 12px; color: var(--muted); letter-spacing: 1px; }
+  .pr-item { padding: 16px 0; border-bottom: 1px solid var(--border); display: flex; gap: 16px; }
+  .pr-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .pr-icon { font-size: 24px; flex-shrink: 0; width: 36px; }
+  .pr-body strong { font-size: 16px; font-weight: 800; color: #fff; }
+  .pr-body p { font-size: 14px; color: var(--muted); margin-top: 4px; line-height: 1.6; }
+  .pr-body .highlight { color: var(--gold); font-weight: 700; }
+  .pr-body .danger { color: #f85149; font-weight: 700; }
+  .pr-body .info { color: var(--blue); font-weight: 700; }
+
+  /* MODAL */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: center; justify-content: center; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 480px; max-width: 95vw; animation: slideUp 0.25s ease; }
+  @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal h2 { font-size: 22px; font-weight: 900; margin-bottom: 6px; }
+  .modal .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 14px; outline: none; transition: border-color 0.2s; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--red); }
+  .form-group textarea { height: 80px; resize: none; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+  .btn-launch { flex: 1; background: var(--red); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+  .btn-launch:hover { background: #ff3039; }
+  .btn-cancel { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+  .btn-cancel:hover { color: var(--text); border-color: var(--text); }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 32px; right: 32px; background: var(--green); color: #fff; padding: 14px 20px; border-radius: 10px; font-weight: 700; font-size: 14px; z-index: 200; transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* DRAWER */
+  .drawer-overlay { display: none; position: fixed; inset: 0; z-index: 90; }
+  .drawer-overlay.open { display: block; }
+  .drawer { position: fixed; top: 0; right: -520px; width: 500px; max-width: 95vw; height: 100vh; background: var(--surface); border-left: 1px solid var(--border); z-index: 95; transition: right 0.3s ease; overflow-y: auto; padding: 28px; }
+  .drawer.open { right: 0; }
+  .drawer-close { position: absolute; top: 20px; right: 20px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .drawer-close:hover { background: var(--border); }
+  .drawer-rank { font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .drawer-name { font-size: 28px; font-weight: 900; margin-bottom: 4px; }
+  .drawer-pts { font-size: 14px; color: var(--gold); font-weight: 700; margin-bottom: 24px; }
+  .drawer-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .dtab { padding: 10px 16px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; text-transform: uppercase; letter-spacing: 0.5px; }
+  .dtab.active { color: var(--red); border-bottom-color: var(--red); }
+  .dtab-content { display: none; }
+  .dtab-content.active { display: block; }
+
+  /* RADAR CHART */
+  .radar-wrap { display: flex; justify-content: center; margin-bottom: 24px; }
+  svg.radar { overflow: visible; }
+
+  /* METRICS TREND */
+  .metric-trend { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .metric-trend:last-child { border-bottom: none; }
+  .mt-name { font-size: 13px; font-weight: 600; color: var(--muted); width: 100px; }
+  .mt-score { font-size: 18px; font-weight: 900; width: 50px; text-align: center; }
+  .mt-change { font-size: 12px; font-weight: 700; width: 60px; text-align: right; }
+  .mt-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 0 12px; }
+  .mt-fill { height: 100%; border-radius: 3px; }
+
+  /* HISTORY BARS */
+  .hist-bars { display: flex; align-items: flex-end; gap: 16px; height: 120px; padding: 0 8px; margin-top: 8px; }
+  .hist-week { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+  .hist-bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--red); transition: height 0.4s; }
+  .hist-label { font-size: 11px; color: var(--muted); }
+  .hist-val { font-size: 12px; font-weight: 700; color: var(--gold); }
+
+  /* CALLOUTS */
+  .callout { padding: 12px 14px; background: var(--surface2); border-left: 3px solid var(--border); border-radius: 0 6px 6px 0; margin-bottom: 10px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .callout.good { border-left-color: var(--green); }
+  .callout.warn { border-left-color: var(--yellow); }
+  .callout.crit { border-left-color: var(--red); }
+
+  /* FOOTER */
+  footer { text-align: center; padding: 24px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); margin-top: 48px; }
+  footer .ghost-line { font-style: italic; color: #4a5568; margin-top: 4px; }
+
+  @media (max-width: 900px) {
+    .lb-row { grid-template-columns: 44px 1fr 70px; }
+    .lb-row > *:nth-child(n+4) { display: none; }
+    .lb-header > *:nth-child(n+4) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-top">
+    <div class="brand">
+      <div class="ghost-avatar">👻</div>
+      <div class="brand-text">
+        <h1>The League</h1>
+        <div class="season">RREAL TACOS — SEASON 2 &nbsp;|&nbsp; WEEK 17</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="tagline">Ghost is watching.<br><strong>The board doesn't lie.</strong></div>
+      <div class="countdown">
+        <div class="label">Week Ends In</div>
+        <div class="time" id="countdown">—</div>
+      </div>
+      <button class="btn-challenge" onclick="openModal()">⚡ Drop a Challenge</button>
+    </div>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('leaderboard', this)">🏆 Leaderboard</div>
+  <div class="tab" onclick="switchTab('rankings', this)">📋 Power Rankings</div>
+  <div class="tab" onclick="switchTab('challenges', this)">⚡ Challenges</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- LEADERBOARD TAB -->
+  <div id="tab-leaderboard" class="tab-content active">
+
+    <!-- Active Challenge Banner -->
+    <div class="challenge-banner">
+      <div class="challenge-header">
+        <span class="challenge-badge">ACTIVE</span>
+        <span class="challenge-title">🎯 Clean Sweep Week</span>
+      </div>
+      <div class="challenge-desc">Submit your EOD before 11 PM every night this week. First location to go 7-for-7 gets <strong style="color:var(--gold)">150 bonus points</strong>.</div>
+      <div class="challenge-progress" id="challengeProgress"></div>
+    </div>
+
+    <div class="section-header">
+      <span class="section-title">Week 17 Standings</span>
+      <span class="live-dot">Live</span>
+    </div>
+
+    <div class="leaderboard">
+      <div class="lb-row lb-header">
+        <div>Rank</div>
+        <div>Location</div>
+        <div style="text-align:center">Points</div>
+        <div>Category Scores</div>
+        <div style="text-align:center">WoW</div>
+        <div>Streak</div>
+        <div>4W Trend</div>
+      </div>
+      <div id="leaderboard-rows"></div>
+    </div>
+  </div>
+
+  <!-- POWER RANKINGS TAB -->
+  <div id="tab-rankings" class="tab-content">
+    <div class="pr-card">
+      <div class="pr-header">
+        <div class="pr-ghost">👻</div>
+        <div>
+          <div class="pr-title">Ghost's Power Rankings</div>
+          <div class="pr-subtitle">WEEK 17 ANALYSIS — UNFILTERED</div>
+        </div>
+      </div>
+      <div class="pr-item">
+        <div class="pr-icon">🥇</div>
+        <div class="pr-body">
+          <strong>Cumming</strong>
+          <p>Janett's running a clinic. Third straight week on the podium. Comps at <span class="highlight">95</span>, labor dialed in, EOD in before midnight every single night. <span class="highlight">This is what good looks like.</span></p>
+        </div>
+      </div>
+      <div class="pr-item">
+        <div class="pr-icon">📈</div>
+        <div class="pr-body">
+          <strong>Lawrenceville</strong>
+          <p>Climbed two spots. Johnny's squad put up the <span class="highlight">best sales number in the building</span> this week. Reviews held strong. EOD timing is the only thing keeping them off the top step.</p>
+        </div>
+      </div>
+      <div class="pr-item">
+        <div class="pr-icon">💡</div>
+        <div class="pr-body">
+          <strong>Dark Horse Watch: Chamblee</strong>
+          <p><span class="info">Jumped two spots.</span> Don't sleep on them. The numbers are trending in the right direction and the team is clearly bought in.</p>
+        </div>
+      </div>
+      <div class="pr-item">
+        <div class="pr-icon">⚠️</div>
+        <div class="pr-body">
+          <strong>Duluth</strong>
+          <p>Fourth straight week in the basement. Labor has been structurally elevated for a month. <span class="danger">This is no longer a bad week. This is a pattern.</span> Something needs to change.</p>
+        </div>
+      </div>
+      <div class="pr-item">
+        <div class="pr-icon">🚨</div>
+        <div class="pr-body">
+          <strong>Sugar Hill</strong>
+          <p>EOD score of <span class="danger">31</span> is an embarrassment. Reports are arriving late or not at all. <span class="danger">The board is public. So is this.</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHALLENGES TAB -->
+  <div id="tab-challenges" class="tab-content">
+    <div class="challenge-banner" style="margin-bottom:16px">
+      <div class="challenge-header">
+        <span class="challenge-badge">ACTIVE</span>
+        <span class="challenge-title">🎯 Clean Sweep Week</span>
+      </div>
+      <div class="challenge-desc">Submit your EOD before 11 PM every night this week. First location to go 7-for-7 gets <strong style="color:var(--gold)">150 bonus points</strong>. Drops Friday at midnight.</div>
+      <div class="challenge-progress" id="challengeProgress2"></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;opacity:0.5">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="background:var(--border);color:var(--muted);font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px">COMPLETED</span>
+        <span style="font-size:16px;font-weight:800;color:var(--muted)">⭐ Review Blitz — Week 16</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted)">Best average Sunday + Google score for the week. <strong style="color:var(--gold)">Winner: Cumming (+100 pts)</strong></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;opacity:0.5">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="background:var(--border);color:var(--muted);font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px">COMPLETED</span>
+        <span style="font-size:16px;font-weight:800;color:var(--muted)">💪 Labor Lock — Week 15</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted)">Closest to 18% labor without going under. <strong style="color:var(--gold)">Winner: Sandy Springs (+75 pts)</strong></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div>Powered by Ghost 👻 &nbsp;|&nbsp; Data updates every 15 min &nbsp;|&nbsp; Season resets every Monday 12:01 AM</div>
+  <div class="ghost-line">"The board doesn't lie. Neither does Ghost."</div>
+</footer>
+
+<!-- MODAL -->
+<div class="overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <h2>⚡ Drop a Challenge</h2>
+    <div class="modal-sub">Broadcast a new objective to all 12 locations. Ghost will track and score it in real-time.</div>
+    <div class="form-group">
+      <label>Challenge Name</label>
+      <input type="text" placeholder="e.g. Perfect Labor Week" id="challengeName">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Category</label>
+        <select>
+          <option>Labor</option>
+          <option>Comps</option>
+          <option>Reviews</option>
+          <option>EOD Timing</option>
+          <option>Sales vs SDLY</option>
+          <option>Custom</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Bonus Points</label>
+        <select>
+          <option>50 pts</option>
+          <option>100 pts</option>
+          <option selected>150 pts</option>
+          <option>200 pts</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Duration</label>
+      <select>
+        <option>This week</option>
+        <option>3 days</option>
+        <option>24 hours</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea placeholder="Describe the objective and how it will be scored..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-launch" onclick="launchChallenge()">Launch Challenge 🚀</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">Challenge dropped. Managers have been notified. 👻</div>
+
+<!-- DRAWER -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  <div id="drawer-content"></div>
+</div>
+
+<script>
+// DATA
+const locations = [
+  { name: "Cumming", pts: 441, labor: 92, comps: 95, reviews: 88, sales: 84, eod: 82, wow: 0, streak: "🔥 3W Podium", spark: [380, 410, 425, 441], challenge: 5 },
+  { name: "Lawrenceville", pts: 428, labor: 88, comps: 79, reviews: 91, sales: 95, eod: 75, wow: 2, streak: "", spark: [395, 378, 401, 428], challenge: 4 },
+  { name: "Woodstock", pts: 409, labor: 85, comps: 82, reviews: 87, sales: 80, eod: 75, wow: 1, streak: "", spark: [370, 390, 398, 409], challenge: 4 },
+  { name: "Sandy Springs", pts: 391, labor: 90, comps: 78, reviews: 85, sales: 72, eod: 66, wow: 0, streak: "", spark: [388, 394, 391, 391], challenge: 3 },
+  { name: "Chamblee", pts: 372, labor: 82, comps: 75, reviews: 80, sales: 70, eod: 65, wow: 2, streak: "📈 2W Rise", spark: [330, 345, 358, 372], challenge: 3 },
+  { name: "Decatur", pts: 358, labor: 78, comps: 71, reviews: 76, sales: 72, eod: 61, wow: -1, streak: "", spark: [370, 368, 362, 358], challenge: 2 },
+  { name: "Midtown", pts: 341, labor: 74, comps: 68, reviews: 62, sales: 82, eod: 55, wow: -2, streak: "", spark: [365, 360, 352, 341], challenge: 2 },
+  { name: "Buckhead", pts: 328, labor: 71, comps: 72, reviews: 74, sales: 65, eod: 46, wow: -1, streak: "", spark: [338, 335, 332, 328], challenge: 2 },
+  { name: "West Midtown", pts: 305, labor: 65, comps: 60, reviews: 58, sales: 68, eod: 54, wow: -3, streak: "", spark: [340, 325, 315, 305], challenge: 1 },
+  { name: "Beltline", pts: 291, labor: 68, comps: 62, reviews: 48, sales: 71, eod: 42, wow: -1, streak: "", spark: [305, 298, 295, 291], challenge: 1 },
+  { name: "Sugar Hill", pts: 274, labor: 58, comps: 51, reviews: 72, sales: 62, eod: 31, wow: 0, streak: "❄️ 3W Slide", spark: [310, 295, 274, 274], challenge: 0 },
+  { name: "Duluth", pts: 261, labor: 52, comps: 64, reviews: 68, sales: 58, eod: 19, wow: -2, streak: "❄️ 4W Slide", spark: [305, 290, 275, 261], challenge: 0 }
+];
+
+const medals = ["🥇", "🥈", "🥉"];
+
+function badgeClass(v) { return v > 80 ? 'g' : v >= 60 ? 'y' : 'r'; }
+
+function renderLeaderboard() {
+  const cont = document.getElementById('leaderboard-rows');
+  cont.innerHTML = locations.map((loc, i) => {
+    const rank = i < 3 ? medals[i] : `<span class="rank-num">#${i+1}</span>`;
+    const rowClass = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+    const wow = loc.wow > 0 ? `<span class="wow up">↑${loc.wow}</span>` : loc.wow < 0 ? `<span class="wow dn">↓${Math.abs(loc.wow)}</span>` : `<span class="wow flat">—</span>`;
+    const maxSpark = Math.max(...loc.spark);
+    const sparks = loc.spark.map(s => `<div class="spark-bar" style="height:${Math.round((s/maxSpark)*100)}%"></div>`).join('');
+    return `<div class="lb-row ${rowClass}" onclick="openDrawer(${i})">
+      <div class="rank">${rank}</div>
+      <div class="loc-name">${loc.name}<div class="sub">Rreal Tacos</div></div>
+      <div class="pts">${loc.pts}<div class="max">/500</div></div>
+      <div class="badges">
+        <span class="badge ${badgeClass(loc.labor)}">Labor ${loc.labor}</span>
+        <span class="badge ${badgeClass(loc.comps)}">Comps ${loc.comps}</span>
+        <span class="badge ${badgeClass(loc.reviews)}">Rev ${loc.reviews}</span>
+        <span class="badge ${badgeClass(loc.sales)}">Sales ${loc.sales}</span>
+        <span class="badge ${badgeClass(loc.eod)}">EOD ${loc.eod}</span>
+      </div>
+      <div>${wow}</div>
+      <div class="streak">${loc.streak || '<span style="color:var(--muted)">—</span>'}</div>
+      <div class="sparkline">${sparks}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderChallengeProgress(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = locations.slice(0, 8).map(loc => {
+    const pct = Math.round((loc.challenge / 7) * 100);
+    const color = pct >= 70 ? '#3fb950' : pct >= 40 ? '#d29922' : '#f85149';
+    return `<div class="cp-item">
+      <div class="cp-name">${loc.name}</div>
+      <div class="cp-bar-wrap">
+        <div class="cp-bar"><div class="cp-fill" style="width:${pct}%;background:${color}"></div></div>
+        <div class="cp-label" style="color:${color}">${loc.challenge}/7</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// COUNTDOWN
+function updateCountdown() {
+  const now = new Date();
+  const sunday = new Date(now);
+  sunday.setDate(now.getDate() + (7 - now.getDay()) % 7 || 7);
+  sunday.setHours(23, 59, 59, 0);
+  const diff = sunday - now;
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  document.getElementById('countdown').textContent = `${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// TABS
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+// MODAL
+function openModal() { document.getElementById('modal-overlay').classList.add('open'); }
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+function closeModalOutside(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
+function launchChallenge() {
+  const name = document.getElementById('challengeName').value.trim();
+  if (!name) { document.getElementById('challengeName').focus(); return; }
+  closeModal();
+  const toast = document.getElementById('toast');
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+// DRAWER
+function openDrawer(i) {
+  const loc = locations[i];
+  const rank = i < 3 ? ['1st 🥇','2nd 🥈','3rd 🥉'][i] : `#${i+1}`;
+  const maxSpark = Math.max(...loc.spark);
+  const histBars = loc.spark.map((s, wi) => {
+    const h = Math.round((s / maxSpark) * 100);
+    return `<div class="hist-week">
+      <div class="hist-val">${s}</div>
+      <div class="hist-bar" style="height:${h}px"></div>
+      <div class="hist-label">W${14+wi}</div>
+    </div>`;
+  }).join('');
+
+  // SVG Radar
+  const metrics = [loc.labor, loc.comps, loc.reviews, loc.sales, loc.eod];
+  const labels = ['Labor', 'Comps', 'Reviews', 'Sales', 'EOD'];
+  const cx = 130, cy = 130, r = 90;
+  const angles = metrics.map((_, i) => (i * 2 * Math.PI / 5) - Math.PI / 2);
+  const pts = metrics.map((v, i) => {
+    const rr = (v / 100) * r;
+    return [cx + rr * Math.cos(angles[i]), cy + rr * Math.sin(angles[i])];
+  });
+  const grid = [0.25, 0.5, 0.75, 1].map(f => {
+    const gp = angles.map(a => [cx + f*r*Math.cos(a), cy + f*r*Math.sin(a)]);
+    return `<polygon points="${gp.map(p=>p.join(',')).join(' ')}" fill="none" stroke="var(--border)" stroke-width="1"/>`;
+  }).join('');
+  const spokes = angles.map(a => `<line x1="${cx}" y1="${cy}" x2="${cx+r*Math.cos(a)}" y2="${cy+r*Math.sin(a)}" stroke="var(--border)" stroke-width="1"/>`).join('');
+  const shape = `<polygon points="${pts.map(p=>p.join(',')).join(' ')}" fill="rgba(227,37,43,0.25)" stroke="var(--red)" stroke-width="2"/>`;
+  const labelsEl = labels.map((l, i) => {
+    const lx = cx + (r + 18) * Math.cos(angles[i]);
+    const ly = cy + (r + 18) * Math.sin(angles[i]);
+    const anchor = lx < cx - 5 ? 'end' : lx > cx + 5 ? 'start' : 'middle';
+    return `<text x="${lx}" y="${ly}" text-anchor="${anchor}" dominant-baseline="middle" fill="var(--muted)" font-size="11" font-weight="600">${l}</text>`;
+  }).join('');
+  const dots = pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="var(--red)"/>`).join('');
+
+  const callouts = getCallouts(i, loc);
+
+  document.getElementById('drawer-content').innerHTML = `
+    <div class="drawer-rank">Rank ${rank}</div>
+    <div class="drawer-name">${loc.name}</div>
+    <div class="drawer-pts">${loc.pts} points this week</div>
+    <div class="drawer-tabs">
+      <div class="dtab active" onclick="switchDTab('overview','${i}',this)">Overview</div>
+      <div class="dtab" onclick="switchDTab('history','${i}',this)">History</div>
+      <div class="dtab" onclick="switchDTab('notes','${i}',this)">Ghost Notes</div>
+    </div>
+    <div class="dtab-content active" id="dtab-overview">
+      <div class="radar-wrap">
+        <svg class="radar" width="260" height="260" viewBox="0 0 260 260">
+          ${grid}${spokes}${shape}${dots}${labelsEl}
+        </svg>
+      </div>
+      <div>
+        ${[['Labor',loc.labor,'#3fb950'],['Comps',loc.comps,'#3fb950'],['Reviews',loc.reviews,'#388bfd'],['Sales',loc.sales,'#d29922'],['EOD',loc.eod,'#e3252b']].map(([n,v,c])=>`
+        <div class="metric-trend">
+          <span class="mt-name">${n}</span>
+          <span class="mt-score" style="color:${c}">${v}</span>
+          <div class="mt-bar"><div class="mt-fill" style="width:${v}%;background:${c}"></div></div>
+          <span class="mt-change" style="color:${v>80?'#3fb950':v>60?'#d29922':'#f85149'}">${v>80?'✓ Strong':v>60?'~ OK':'✗ Needs Work'}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="dtab-content" id="dtab-history">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;text-transform:uppercase">Last 4 Weeks — Total Points</div>
+      <div class="hist-bars" style="align-items:flex-end">${histBars}</div>
+    </div>
+    <div class="dtab-content" id="dtab-notes">
+      <div style="font-size:12px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">Ghost's Observations</div>
+      ${callouts}
+    </div>
+  `;
+
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('open');
+}
+
+function getCallouts(i, loc) {
+  const sets = [
+    ['good|Comps discipline is the best in the company. Janett is reviewing individual server numbers weekly — this is the model everyone else should be studying.',
+     'good|EOD submissions have been on time or early every night for 3+ weeks. Gold standard.',
+     'warn|Sales vs SDLY is solid but has room to grow — watch for staffing optimization during peak hours.'],
+    ['good|Best sales week in the company. Johnny\'s squad is executing on revenue.',
+     'warn|EOD timing is the weak link — reports are arriving after midnight on multiple nights. Fix this and they take the top spot.',
+     'good|Reviews holding strong above 90. Guest experience is clearly a priority.'],
+    ['good|Consistent podium contender. Labor and comps both green.',
+     'good|Trending upward for 4 straight weeks — momentum is real.',
+     'warn|Sales vs SDLY has plateaued. Need a push on volume.'],
+    ['good|Best labor in the company at 90. Sandy Springs is running lean without sacrificing service.',
+     'warn|Comps crept up this week — watch the authorization patterns.',
+     'warn|EOD timing inconsistent — some nights past 11 PM cutoff.'],
+    ['good|2-week rise — best momentum trend in the group right now.',
+     'warn|Comps and EOD both in yellow zone. Need consistency to hold the climb.',
+     'good|Labor trending green. Team appears engaged.'],
+    ['warn|Slid one spot. Labor and comps both holding yellow but not improving.',
+     'warn|EOD timing score dropped — reports arriving later each week. Investigate.',
+     'good|Reviews stable. Guest experience maintained despite operational pressure.'],
+    ['good|Sales vs SDLY strongest in the lower half of the board.',
+     'crit|Reviews at 62 — lowest in the top 7. Service quality needs attention.',
+     'warn|Dropped two spots. Need to stabilize labor before this becomes a trend.'],
+    ['crit|EOD score of 46 is dragging the total. Reports frequently missing or very late.',
+     'warn|Labor trending down for 3 weeks. Staffing decisions need review.',
+     'warn|Sitting at #8 — one bad week from dropping into the bottom tier.'],
+    ['crit|Down 3 spots — worst week-over-week drop in the group.',
+     'crit|Reviews at 58. Consistent service issues showing up in scores.',
+     'warn|Comps at 60 — right on the edge. Monitor authorization patterns closely.'],
+    ['warn|Reviews at 48 — worst in the company. Beltline is top sales volume but bottom feedback. That\'s a disconnect.',
+     'crit|EOD at 42. Unacceptable submission rate.',
+     'warn|Best sales in the bottom half but performance gaps are widening.'],
+    ['crit|EOD score of 31 is the worst in the company. Reports are either missing or days late.',
+     'crit|Comps at 51 — bottom two in the group. Authorization is broken or unsupervised.',
+     'warn|3-week slide. The trajectory is bad. Needs immediate intervention.'],
+    ['crit|4-week slide. Labor structurally elevated — this is no longer a one-off issue.',
+     'crit|EOD score of 19 is last place and it\'s not close. This is a communication breakdown.',
+     'warn|Sales and reviews both mid-table — the potential is there. The execution isn\'t.']
+  ];
+  return sets[i].map(s => {
+    const [cls, txt] = s.split('|');
+    return `<div class="callout ${cls}">${txt}</div>`;
+  }).join('');
+}
+
+function switchDTab(name, locIdx, el) {
+  document.querySelectorAll('.dtab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.dtab').forEach(t => t.classList.remove('active'));
+  document.getElementById('dtab-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+
+// INIT
+renderLeaderboard();
+renderChallengeProgress('challengeProgress');
+renderChallengeProgress('challengeProgress2');
+updateCountdown();
+setInterval(updateCountdown, 1000);
+</script>
+</body>
+</html>
