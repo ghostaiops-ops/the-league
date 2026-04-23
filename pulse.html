@@ -309,7 +309,10 @@ html, body {
     </div>
   </div>
   <div class="top-bar-sep"></div>
-  <div class="live-dot"></div>
+  <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+    <div class="live-dot"></div>
+    <div id="tb-date" style="font-size:10px;color:var(--dust);letter-spacing:.08em;white-space:nowrap"></div>
+  </div>
   <button class="refresh-btn" id="refresh-btn" onclick="triggerRefresh()" title="Refresh">
     <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M10.5 2A5 5 0 1 0 11 6.5"/><polyline points="8,0 10.5,2 8.5,4.5"/>
@@ -509,6 +512,11 @@ function updateTopBar(){
   document.getElementById('tb-rating').textContent=r?'★ '+Number(r).toFixed(2):'—';
   const t=dashData.toast?.tipRate??null;
   document.getElementById('tb-tip').textContent=t?fmtPct(t):'—';
+  // Date label — use data date if available, else today
+  const dataDate=dashData.date??dashData.reportDate??null;
+  const d=dataDate?new Date(dataDate):new Date();
+  const label=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  document.getElementById('tb-date').textContent=label;
 }
 
 function updateVitals(){
