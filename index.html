@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ghost — Dashboard Archive</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0D1117; color: #E6EDF3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px 24px; }
+  h1 { font-size: 24px; font-weight: 900; letter-spacing: 2px; margin-bottom: 6px; }
+  .sub { font-size: 13px; color: #8B949E; margin-bottom: 32px; }
+  .ghost { color: #E3252B; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .card { background: #161B22; border: 1px solid #30363D; border-radius: 12px; padding: 20px; text-decoration: none; color: inherit; display: block; transition: all 0.2s; }
+  .card:hover { border-color: #E3252B; transform: translateY(-2px); box-shadow: 0 4px 20px rgba(227,37,43,0.2); }
+  .card-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #8B949E; margin-bottom: 8px; }
+  .card-label.new { color: #F5A623; }
+  .card-label.concept { color: #388BFD; }
+  .card-label.map { color: #3FB950; }
+  .card-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  .card-desc { font-size: 13px; color: #8B949E; line-height: 1.5; }
+  .divider { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #30363D; text-transform: uppercase; margin: 32px 0 16px; border-bottom: 1px solid #30363D; padding-bottom: 8px; }
+</style>
+</head>
+<body>
+  <h1>👻 <span class="ghost">Ghost</span> — Dashboard Archive</h1>
+  <div class="sub">All Rreal Tacos dashboards in one place. Tap to preview.</div>
+
+  <div class="divider">⭐ New</div>
+  <div class="grid">
+    <a class="card" href="the-league.html">
+      <div class="card-label new">New — Mockup</div>
+      <div class="card-title">🏆 The League</div>
+      <div class="card-desc">Location competition platform. Live leaderboard, Power Rankings, Challenges, and Ghost's weekly analysis.</div>
+    </a>
+  </div>
+
+  <div class="divider">📊 Ops Dashboards</div>
+  <div class="grid">
+    <a class="card" href="ops-dashboard-v1.html">
+      <div class="card-label">v1</div>
+      <div class="card-title">Operations Dashboard</div>
+      <div class="card-desc">Rreal Tacos ops dashboard — first version.</div>
+    </a>
+    <a class="card" href="ghost-ops-v2.html">
+      <div class="card-label">v2</div>
+      <div class="card-title">Ghost Ops</div>
+      <div class="card-desc">Second iteration — Ghost-branded ops view.</div>
+    </a>
+    <a class="card" href="ops-dashboard-v3.html">
+      <div class="card-label">v3</div>
+      <div class="card-title">Ops Dashboard v3</div>
+      <div class="card-desc">Third iteration of the main ops dashboard.</div>
+    </a>
+    <a class="card" href="pulse.html">
+      <div class="card-label">Pulse</div>
+      <div class="card-title">PULSE</div>
+      <div class="card-desc">Real-time operations pulse view.</div>
+    </a>
+  </div>
+
+  <div class="divider">🗺️ Map Views</div>
+  <div class="grid">
+    <a class="card" href="map-v1.html">
+      <div class="card-label map">Map v1</div>
+      <div class="card-title">Map Command Center</div>
+      <div class="card-desc">First map-based command center concept.</div>
+    </a>
+    <a class="card" href="map-v2.html">
+      <div class="card-label map">Map v2</div>
+      <div class="card-title">Operations Command</div>
+      <div class="card-desc">Refined map-based operations view.</div>
+    </a>
+  </div>
+
+  <div class="divider">🧪 Concepts</div>
+  <div class="grid">
+    <a class="card" href="concept-map.html">
+      <div class="card-label concept">Concept 1</div>
+      <div class="card-title">Map Command Center</div>
+      <div class="card-desc">Location map concept.</div>
+    </a>
+    <a class="card" href="concept-trading-floor.html">
+      <div class="card-label concept">Concept 2</div>
+      <div class="card-title">Trading Floor</div>
+      <div class="card-desc">Bloomberg-style trading floor layout.</div>
+    </a>
+    <a class="card" href="concept-scorecard.html">
+      <div class="card-label concept">Concept 3</div>
+      <div class="card-title">Scorecard Wall</div>
+      <div class="card-desc">Scorecard-style location wall view.</div>
+    </a>
+    <a class="card" href="concept-command.html">
+      <div class="card-label concept">Concept 4</div>
+      <div class="card-title">Ops Command Center</div>
+      <div class="card-desc">Full command center concept.</div>
+    </a>
+  </div>
+</body>
+</html>
