@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rreal Tacos — Scorecard Wall</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --brand-red:#e33239;--brand-blue:#1e93da;--brand-dark:#1a2429;--brand-navy:#0f1923;
+    --green:#22c55e;--yellow:#eab308;--text:#f0f0f8;
+  }
+  body{background:var(--brand-navy);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+
+  /* TOP BAR */
+  #topbar{
+    display:flex;align-items:center;gap:12px;padding:0 16px;height:54px;
+    background:var(--brand-dark);border-bottom:1px solid #2a3540;flex-shrink:0;position:sticky;top:0;z-index:100;
+  }
+  #topbar img{height:26px}
+  .tb-sep{width:1px;height:28px;background:#2a3540}
+  #topTitle{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8a9aaa;white-space:nowrap}
+  #dateSelect{background:#1e2d36;border:1px solid #3a4a56;color:var(--text);padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer}
+  .kpi-strip{display:flex;gap:14px;flex:1;justify-content:center}
+  .kpi{text-align:center}
+  .kpi-val{font-size:16px;font-weight:700;color:var(--brand-blue)}
+  .kpi-lbl{font-size:9px;color:#6a7a8a;text-transform:uppercase;letter-spacing:.5px}
+  #refreshBtn{background:var(--brand-red);border:none;color:#fff;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+  #staleWarn{color:#f59e0b;font-size:11px;font-weight:600;display:none}
+
+  /* CONTROLS */
+  #controls{
+    display:flex;align-items:center;gap:10px;padding:10px 16px;
+    background:#111820;border-bottom:1px solid #2a3540;flex-wrap:wrap;
+  }
+  .ctrl-group{display:flex;align-items:center;gap:6px}
+  .ctrl-label{font-size:11px;color:#6a7a8a;text-transform:uppercase;letter-spacing:.5px}
+  .pill{padding:5px 14px;border-radius:20px;border:1px solid #3a4a56;background:transparent;color:var(--text);font-size:12px;cursor:pointer;transition:all .2s}
+  .pill:hover,.pill.active{background:var(--brand-blue);border-color:var(--brand-blue);color:#fff}
+  .pill.active-red{background:var(--brand-red);border-color:var(--brand-red);color:#fff}
+  #dateBadge{font-size:11px;color:#8a9aaa}
+
+  /* GRID */
+  #grid{
+    padding:16px;flex:1;
+    display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+    align-content:start;
+  }
+  #grid.list-view{grid-template-columns:1fr;gap:6px}
+
+  /* CARD */
+  .loc-card{
+    background:var(--brand-dark);border-radius:10px;border:2px solid #2a3540;
+    padding:14px;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;
+    position:relative;overflow:hidden;
+  }
+  .loc-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  .loc-card.border-ok{border-color:#22c55e}
+  .loc-card.border-warn{border-color:#eab308}
+  .loc-card.border-danger{border-color:#e33239}
+  .loc-card.highlighted{box-shadow:0 0 0 3px var(--brand-blue),0 8px 24px rgba(30,147,218,.3);transform:translateY(-2px)}
+
+  /* Card Header */
+  .card-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .rank-badge{
+    width:28px;height:28px;border-radius:50%;background:var(--brand-navy);border:1px solid #3a4a56;
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+    color:var(--brand-blue);flex-shrink:0;
+  }
+  .rank-badge.r1{background:#d97706;color:#fff;border-color:#d97706}
+  .rank-badge.r2{background:#6b7280;color:#fff;border-color:#6b7280}
+  .rank-badge.r3{background:#92400e;color:#fff;border-color:#92400e}
+  .card-name{font-size:14px;font-weight:700;flex:1}
+  .status-pill{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;flex-shrink:0}
+  .sp-ok{background:#15532a;color:#22c55e}
+  .sp-warn{background:#713f12;color:#eab308}
+  .sp-danger{background:#4c1010;color:#ef4444}
+
+  /* Hero */
+  .hero-sales{font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1;margin-bottom:2px}
+  .wow-row{font-size:12px;margin-bottom:8px}
+  .wow-up{color:#22c55e}
+  .wow-dn{color:#e33239}
+  .wow-flat{color:#eab308}
+
+  /* Stats */
+  .stats-row{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+  .stat-chip{background:#1e2d36;border-radius:4px;padding:4px 8px;text-align:center;flex:1;min-width:60px}
+  .sc-val{font-size:13px;font-weight:700}
+  .sc-lbl{font-size:9px;color:#6a7a8a;text-transform:uppercase}
+
+  /* Bottom row */
+  .card-footer{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .flag-pill{background:#3d2f00;color:#eab308;border:1px solid #854d0e;border-radius:4px;padding:2px 6px;font-size:10px}
+  .uber-pill{border-radius:4px;padding:2px 6px;font-size:10px;font-weight:600}
+  .uber-online{background:#15532a;color:#22c55e}
+  .uber-offline{background:#4c1010;color:#ef4444}
+
+  /* List view card */
+  #grid.list-view .loc-card{
+    display:flex;align-items:center;gap:16px;padding:10px 14px;border-radius:6px;
+  }
+  #grid.list-view .card-body{display:flex;align-items:center;gap:16px;flex:1;flex-wrap:wrap}
+  #grid.list-view .hero-sales{font-size:20px;min-width:100px}
+  #grid.list-view .stats-row{margin-bottom:0;flex-wrap:nowrap}
+  #grid.list-view .card-footer{margin-top:0}
+
+  /* MODAL */
+  #modal{
+    position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:5000;
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  #modal.open{display:flex}
+  #modalBox{
+    background:var(--brand-dark);border-radius:12px;width:100%;max-width:560px;
+    max-height:90vh;overflow-y:auto;position:relative;border:1px solid #2a3540;
+  }
+  #modalClose{
+    position:absolute;top:12px;right:12px;background:#1e2d36;border:none;color:var(--text);
+    font-size:16px;cursor:pointer;border-radius:50%;width:28px;height:28px;
+    display:flex;align-items:center;justify-content:center;z-index:1;
+  }
+  #modalContent{padding:24px}
+  .modal-name{font-size:24px;font-weight:700;margin-bottom:4px}
+  .modal-section{margin-bottom:16px}
+  .modal-section h4{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6a7a8a;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #2a3540}
+  .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .modal-stat{background:#1e2d36;border-radius:6px;padding:8px 10px}
+  .modal-stat-val{font-size:16px;font-weight:700}
+  .modal-stat-lbl{font-size:10px;color:#6a7a8a;text-transform:uppercase}
+  .server-row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px solid #2a3540}
+
+  /* LOADING */
+  #loading{
+    position:fixed;inset:0;background:var(--brand-navy);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;z-index:9999;gap:16px;
+  }
+  #loading img{height:60px;animation:pulse 1.5s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+
+  #errorBanner{position:fixed;top:54px;left:0;right:0;background:#4c1010;color:#ef4444;padding:10px 20px;text-align:center;z-index:5000;display:none;font-weight:600}
+
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:#1a2429}
+  ::-webkit-scrollbar-thumb{background:#3a4a56;border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <img src="https://cdn.prod.website-files.com/6942ec7702201d9a4c1626b4/6945814389a8d77af25137bb_Logo%20white.svg" alt="Rreal Tacos">
+  <p>Loading scorecard…</p>
+</div>
+
+<div id="errorBanner"></div>
+
+<div id="topbar">
+  <img src="https://cdn.prod.website-files.com/6942ec7702201d9a4c1626b4/6945814389a8d77af25137bb_Logo%20white.svg" alt="Rreal Tacos">
+  <div class="tb-sep"></div>
+  <span id="topTitle">Rreal Tacos Command</span>
+  <div class="tb-sep"></div>
+  <select id="dateSelect" title="Select date"></select>
+  <span id="dateBadge"></span>
+  <div class="tb-sep"></div>
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-val" id="kTotSales">—</div><div class="kpi-lbl">Total Sales</div></div>
+    <div class="kpi"><div class="kpi-val" id="kCovers">—</div><div class="kpi-lbl">Covers</div></div>
+    <div class="kpi"><div class="kpi-val" id="kAvgGuest">—</div><div class="kpi-lbl">Avg/Guest</div></div>
+    <div class="kpi"><div class="kpi-val" id="kRating">—</div><div class="kpi-lbl">★ Rating</div></div>
+    <div class="kpi"><div class="kpi-val" id="kTipRate">—</div><div class="kpi-lbl">Tip Rate</div></div>
+    <div class="kpi"><div class="kpi-val" id="kUnresolved" style="color:var(--brand-red)">—</div><div class="kpi-lbl">Unresolved</div></div>
+  </div>
+  <span id="staleWarn">⚠ Stale</span>
+  <button id="refreshBtn">⟳ Refresh</button>
+</div>
+
+<div id="controls">
+  <div class="ctrl-group">
+    <span class="ctrl-label">Sort:</span>
+    <button class="pill active" data-sort="sales">Sales</button>
+    <button class="pill" data-sort="rating">Rating</button>
+    <button class="pill" data-sort="labor">Labor</button>
+    <button class="pill" data-sort="flags">Flags</button>
+    <button class="pill" data-sort="tiprate">Tip Rate</button>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">View:</span>
+    <button class="pill active" data-view="grid" id="viewGrid">⊞ Grid</button>
+    <button class="pill" data-view="list" id="viewList">≡ List</button>
+  </div>
+</div>
+
+<div id="grid"></div>
+
+<!-- MODAL -->
+<div id="modal">
+  <div id="modalBox">
+    <button id="modalClose">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+const fmt$ = n => n==null ? '—' : '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtN = (n,d=1) => n==null ? '—' : Number(n).toFixed(d);
+const fmtPct = n => n==null ? '—' : Number(n).toFixed(1)+'%';
+const fmtStar = n => n==null ? '—' : '★ '+Number(n).toFixed(2);
+function timeAgo(d){if(!d)return'';const s=(Date.now()-new Date(d))/1000;if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
+function locationHealth(toastLoc, sundayLoc) {
+  const flags = toastLoc?.flags?.length || 0;
+  const rating = sundayLoc?.avgRating || 0;
+  if (flags >= 3 || (rating > 0 && rating < 4.5)) return 'danger';
+  if (flags >= 1 || (rating > 0 && rating < 4.8)) return 'warn';
+  return 'ok';
+}
+function matchUberStore(stores, locName) {
+  return stores?.find(s => s.name.replace(/^Rreal Tacos\s*/i,'').trim().toLowerCase() === locName.toLowerCase());
+}
+
+let DATA = {};
+let reports = [];
+let currentDate = null;
+let currentSort = 'sales';
+let currentView = 'grid';
+
+async function loadAll(date) {
+  try {
+    const [dash, uber, tips, pnl, rpts] = await Promise.all([
+      fetch(date ? `/api/dashboard/all?date=${date}` : '/api/dashboard/all').then(r=>r.json()),
+      fetch('/api/ubereats').then(r=>r.json()),
+      fetch('/api/tipouts').then(r=>r.json()),
+      fetch('/api/pnl').then(r=>r.json()),
+      fetch('/api/reports/list').then(r=>r.json()),
+    ]);
+    DATA = { dash, uber, tips, pnl, rpts };
+    reports = rpts.reports || [];
+    currentDate = date || dash.toast?.businessDate;
+
+    const generatedAt = dash.toast?.generatedAt;
+    const staleEl = document.getElementById('staleWarn');
+    if (generatedAt) {
+      const gt = new Date(generatedAt);
+      if (!isNaN(gt) && (Date.now() - gt) > 86400000) staleEl.style.display='inline';
+      else staleEl.style.display='none';
+    }
+
+    populateDateDropdown();
+    renderKPIs();
+    renderCards();
+    document.getElementById('loading').style.display='none';
+  } catch(e) {
+    document.getElementById('loading').style.display='none';
+    showError('Failed to load data: ' + e.message);
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display='none', 5000);
+}
+
+function populateDateDropdown() {
+  const sel = document.getElementById('dateSelect');
+  sel.innerHTML = '';
+  for (const r of reports) {
+    const opt = document.createElement('option');
+    opt.value = r.date;
+    opt.textContent = r.label;
+    if (r.date === currentDate) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  const cur = reports.find(r=>r.date===currentDate);
+  document.getElementById('dateBadge').textContent = cur ? cur.label.replace(/^⚠\s*/,'') : '';
+}
+
+function renderKPIs() {
+  const cs = DATA.dash?.toast?.companySummary;
+  const sun = DATA.dash?.sunday?.company;
+  const ov = DATA.dash?.ovation;
+  document.getElementById('kTotSales').textContent = cs ? fmt$(cs.totalNetSales) : '—';
+  document.getElementById('kCovers').textContent = cs ? Number(cs.totalCovers).toLocaleString() : '—';
+  document.getElementById('kAvgGuest').textContent = cs ? fmt$(cs.avgPerGuest) : '—';
+  document.getElementById('kRating').textContent = sun ? fmtStar(sun.avgRating) : '—';
+  document.getElementById('kTipRate').textContent = sun?.avgTipRate != null ? fmtPct(sun.avgTipRate * 100) : '—';
+  document.getElementById('kUnresolved').textContent = ov?.unresolvedCount ?? '—';
+}
+
+function getSortValue(loc, sunLoc) {
+  switch (currentSort) {
+    case 'sales': return loc.metrics?.netSales || 0;
+    case 'rating': return sunLoc?.avgRating || 0;
+    case 'labor': return loc.labor?.totalLaborHours || 0;
+    case 'flags': return -(loc.flags?.length || 0); // more flags = lower rank
+    case 'tiprate': return sunLoc?.tipRate || 0;
+    default: return 0;
+  }
+}
+
+function renderCards() {
+  const locs = DATA.dash?.toast?.locations || [];
+  const sunLocs = DATA.dash?.sunday?.locations || [];
+  const uberStores = DATA.uber?.data?.stores || [];
+  const tipLocs = DATA.tips?.data?.locations || {};
+  const pnlData = DATA.pnl?.data || [];
+  const latestPnl = pnlData[0]?.locations || {};
+
+  // Sort
+  const sorted = [...locs].sort((a, b) => {
+    const sA = getSortValue(a, sunLocs.find(s=>s.name===a.name));
+    const sB = getSortValue(b, sunLocs.find(s=>s.name===b.name));
+    return sB - sA;
+  });
+
+  // Avg sales for below-average detection
+  const totalSales = locs.reduce((sum, l) => sum + (l.metrics?.netSales || 0), 0);
+  const avgSales = locs.length > 0 ? totalSales / locs.length : 0;
+
+  const grid = document.getElementById('grid');
+  grid.className = currentView === 'list' ? 'list-view' : '';
+  grid.innerHTML = '';
+
+  sorted.forEach((loc, idx) => {
+    const rank = idx + 1;
+    const sunLoc = sunLocs.find(s=>s.name===loc.name);
+    const health = locationHealth(loc, sunLoc);
+    const uberStore = matchUberStore(uberStores, loc.name);
+    const tipLoc = tipLocs[loc.name];
+    const locPnl = latestPnl[loc.name];
+
+    const sales = loc.metrics?.netSales || 0;
+    const sdlySales = loc.sdlyMetrics?.netSales;
+    let wowPct = null;
+    if (sdlySales && sdlySales > 0) wowPct = ((sales - sdlySales) / sdlySales) * 100;
+
+    const healthClass = health === 'ok' ? 'border-ok' : health === 'warn' ? 'border-warn' : 'border-danger';
+    const spClass = health === 'ok' ? 'sp-ok' : health === 'warn' ? 'sp-warn' : 'sp-danger';
+    const spLabel = health === 'ok' ? '🟢 On Track' : health === 'warn' ? '🟡 Watch' : '🔴 Alert';
+
+    // Below average → also danger
+    const belowAvg = sales > 0 && sales < avgSales * 0.75;
+    const finalBorderClass = (health === 'danger' || belowAvg) ? 'border-danger' : healthClass;
+
+    const rankCls = rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : '';
+    const salesColor = health === 'ok' ? '#22c55e' : health === 'warn' ? '#eab308' : '#ef4444';
+
+    let wowHtml = '';
+    if (wowPct != null) {
+      const cls = wowPct > 1 ? 'wow-up' : wowPct < -1 ? 'wow-dn' : 'wow-flat';
+      const arrow = wowPct > 1 ? '▲' : wowPct < -1 ? '▼' : '▶';
+      wowHtml = `<div class="wow-row ${cls}">${arrow} ${Math.abs(wowPct).toFixed(1)}% vs prior period</div>`;
+    }
+
+    const flagsHtml = (loc.flags || []).map(f=>`<span class="flag-pill">${f}</span>`).join('');
+    const uberHtml = uberStore
+      ? `<span class="uber-pill ${uberStore.today?.online ? 'uber-online' : 'uber-offline'}">UE ${uberStore.today?.online ? '●' : '○'}</span>`
+      : '';
+
+    const card = document.createElement('div');
+    card.className = `loc-card ${finalBorderClass}`;
+    card.dataset.name = loc.name;
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="rank-badge ${rankCls}">#${rank}</div>
+        <div class="card-name">${loc.name}</div>
+        <span class="status-pill ${spClass}">${spLabel}</span>
+      </div>
+      <div class="hero-sales" style="color:${salesColor}">${fmt$(sales)}</div>
+      ${wowHtml}
+      <div class="stats-row">
+        <div class="stat-chip"><div class="sc-val">${loc.metrics?.coverCount != null ? Number(loc.metrics.coverCount).toLocaleString() : '—'}</div><div class="sc-lbl">Covers</div></div>
+        <div class="stat-chip"><div class="sc-val">${fmt$(loc.metrics?.avgPerGuest)}</div><div class="sc-lbl">Avg/Guest</div></div>
+        <div class="stat-chip"><div class="sc-val">${fmt$(loc.metrics?.avgCheckSize)}</div><div class="sc-lbl">Avg Check</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-chip"><div class="sc-val" style="color:#eab308">${fmtStar(sunLoc?.avgRating)}</div><div class="sc-lbl">★ Rating</div></div>
+        <div class="stat-chip"><div class="sc-val">${sunLoc?.adoption != null ? fmtPct(sunLoc.adoption*100) : '—'}</div><div class="sc-lbl">Adoption</div></div>
+        <div class="stat-chip"><div class="sc-val">${sunLoc?.tipRate != null ? fmtPct(sunLoc.tipRate*100) : '—'}</div><div class="sc-lbl">Tip Rate</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-chip"><div class="sc-val">${fmtN(loc.labor?.totalLaborHours)}h</div><div class="sc-lbl">Labor Hrs</div></div>
+        <div class="stat-chip"><div class="sc-val">${loc.labor?.currentlyClockedCount ?? '—'}</div><div class="sc-lbl">Clocked In</div></div>
+        <div class="stat-chip"><div class="sc-val">${locPnl?.laborPct != null ? fmtPct(locPnl.laborPct) : '—'}</div><div class="sc-lbl">Labor%</div></div>
+      </div>
+      <div class="card-footer">
+        ${flagsHtml}
+        ${uberHtml}
+      </div>`;
+
+    card.addEventListener('click', () => openModal(loc, sunLoc, uberStore, tipLoc, health, rank));
+    grid.appendChild(card);
+  });
+}
+
+function openModal(loc, sunLoc, uberStore, tipLoc, health, rank) {
+  const m = loc.metrics;
+  const lm = loc.labor;
+  const badgeCls = health === 'ok' ? 'sp-ok' : health === 'warn' ? 'sp-warn' : 'sp-danger';
+  const badgeLabel = health === 'ok' ? '🟢 On Track' : health === 'warn' ? '🟡 Watch' : '🔴 Alert';
+  const flags = (loc.flags || []).map(f => `<span class="flag-pill" style="margin:2px;display:inline-block">${f}</span>`).join('') || '<span style="color:#6a7a8a;font-size:12px">None</span>';
+
+  let topServers = '';
+  if (tipLoc?.servers?.length) {
+    const sorted = [...tipLoc.servers].sort((a,b)=>(b.totalPayout||0)-(a.totalPayout||0)).slice(0,3);
+    topServers = sorted.map(s=>`<div class="server-row"><span>${s.firstName} ${s.lastName}</span><span style="color:var(--green)">${fmt$(s.totalPayout)}</span></div>`).join('');
+  } else topServers = '<div style="color:#6a7a8a;font-size:12px">No data</div>';
+
+  const uberStatus = uberStore ? (uberStore.today?.online ? '🟢 Online' : '🔴 Offline') : '—';
+  const uberSales = uberStore?.today?.sales ? fmt$(uberStore.today.sales) : '—';
+
+  document.getElementById('modalContent').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div class="rank-badge ${rank<=3?'r'+rank:''}" style="width:32px;height:32px;border-radius:50%;background:var(--brand-navy);border:1px solid #3a4a56;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--brand-blue)">#${rank}</div>
+      <div class="modal-name">${loc.name}</div>
+      <span class="status-pill ${badgeCls}">${badgeLabel}</span>
+    </div>
+    <div class="modal-section">
+      <h4>Sales</h4>
+      <div class="modal-grid">
+        <div class="modal-stat"><div class="modal-stat-val">${fmt$(m?.netSales)}</div><div class="modal-stat-lbl">Net Sales</div></div>
+        <div class="modal-stat"><div class="modal-stat-val">${m?.coverCount != null ? Number(m.coverCount).toLocaleString() : '—'}</div><div class="modal-stat-lbl">Covers</div></div>
+        <div class="modal-stat"><div class="modal-stat-val">${fmt$(m?.avgPerGuest)}</div><div class="modal-stat-lbl">Avg/Guest</div></div>
+        <div class="modal-stat"><div class="modal-stat-val">${fmt$(m?.avgCheckSize)}</div><div class="modal-stat-lbl">Avg Check</div></div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <h4>Daypart</h4>
+      <div class="modal-grid">
+        <div class="modal-stat"><div class="modal-stat-val">${fmt$(m?.daypart?.lunch?.sales)}</div><div class="modal-stat-lbl">Lunch</div></div>
+        <div class="modal-stat"><div class="modal-stat-val">${fmt$(m?.daypart?.dinner?.sales)}</div><div class="modal-stat-lbl">Dinner</div></div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <h4>Sunday Pay</h4>
+      <div class="modal-grid">
+        <div class="modal-stat"><div class="modal-stat-val" style="color:#eab308">${fmtStar(sunLoc?.avgRating)}</div><div class="modal-stat-lbl">Rating</div></div>
+        <div class="modal-stat"><div class="modal-stat-val">${sunLoc?.adoption != null ? fmtPct(sunLoc.adoption*100) : '—'}</div><div class="modal-stat-lbl">Adoption</div></div>
+        <div class="modal-stat"><div class="modal-stat-val">${sunLoc?.tipRate != null ? fmtPct(sunLoc.tipRate*100) : '—'}</div><div class="modal-stat-lbl">Tip Rate</div></div>
+        <div class="modal-stat"><div class="modal-stat-val">${sunLoc?.totalReviews ?? '—'}</div><div class="modal-stat-lbl">Reviews</div></div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <h4>Quality</h4>
+      <div class="modal-grid">
+        <div class="modal-stat"><div class="modal-stat-val">${fmtPct(m?.voids?.pct)}</div><div class="modal-stat-lbl">Voids %</div></div>
+        <div class="modal-stat"><div class="modal-stat-val">${fmtPct(m?.comps?.pct)}</div><div class="modal-stat-lbl">Comps %</div></div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <h4>Labor</h4>
+      <div class="modal-grid">
+        <div class="modal-stat"><div class="modal-stat-val">${fmtN(lm?.totalLaborHours)}h</div><div class="modal-stat-lbl">Total Hours</div></div>
+        <div class="modal-stat"><div class="modal-stat-val">${lm?.currentlyClockedCount ?? '—'}</div><div class="modal-stat-lbl">Clocked In</div></div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <h4>UberEats</h4>
+      <div style="display:flex;align-items:center;gap:12px;padding:6px 0">
+        <span>${uberStatus}</span>
+        <span style="color:var(--green);margin-left:auto">${uberSales}</span>
+      </div>
+    </div>
+    <div class="modal-section">
+      <h4>Flags</h4>
+      <div>${flags}</div>
+    </div>
+    <div class="modal-section">
+      <h4>Top Servers (Week)</h4>
+      ${topServers}
+    </div>`;
+
+  document.getElementById('modal').classList.add('open');
+}
+
+// Sort controls
+document.querySelectorAll('[data-sort]').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('[data-sort]').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+    currentSort = this.dataset.sort;
+    renderCards();
+  });
+});
+
+// View toggle
+document.querySelectorAll('[data-view]').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('[data-view]').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+    currentView = this.dataset.view;
+    renderCards();
+  });
+});
+
+// Date selector
+document.getElementById('dateSelect').addEventListener('change', function() { loadAll(this.value); });
+document.getElementById('refreshBtn').addEventListener('click', () => { const d = document.getElementById('dateSelect').value; loadAll(d); });
+
+// Modal
+document.getElementById('modalClose').addEventListener('click', () => document.getElementById('modal').classList.remove('open'));
+document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) document.getElementById('modal').classList.remove('open'); });
+
+// Boot
+fetch('/api/reports/list').then(r=>r.json()).then(d=>{
+  const rpts = d.reports || [];
+  const first = rpts.find(r=>!r.partial) || rpts[0];
+  loadAll(first?.date || null);
+}).catch(()=>loadAll(null));
+</script>
+</body>
+</html>

@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rreal Tacos — Map Command Center</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --brand-red:#e33239;--brand-blue:#1e93da;--brand-dark:#1a2429;--brand-navy:#0f1923;
+    --green:#22c55e;--yellow:#eab308;--text:#f0f0f8;
+  }
+  body{background:var(--brand-navy);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  /* ── TOP BAR ── */
+  #topbar{
+    display:flex;align-items:center;gap:10px;padding:0 16px;height:56px;
+    background:var(--brand-dark);border-bottom:1px solid #2a3540;flex-shrink:0;z-index:1000;
+  }
+  #topbar img{height:28px;flex-shrink:0}
+  .tb-sep{width:1px;height:28px;background:#2a3540;flex-shrink:0}
+
+  .tb-select{
+    background:#1e2d36;border:1px solid #3a4a56;color:var(--text);
+    padding:6px 10px;border-radius:6px;font-size:13px;cursor:pointer;
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238a9aaa'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 8px center;
+    padding-right:28px;
+  }
+  .tb-select:focus{outline:none;border-color:var(--brand-blue)}
+  .tb-select option{background:#1a2429}
+
+  #customRange{display:none;align-items:center;gap:6px;font-size:12px;color:#8a9aaa}
+  #customRange input[type=date]{
+    background:#1e2d36;border:1px solid #3a4a56;color:var(--text);
+    padding:5px 8px;border-radius:6px;font-size:12px;cursor:pointer;
+  }
+  #customRange input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1);cursor:pointer}
+  #applyRange{
+    background:var(--brand-blue);border:none;color:#fff;padding:5px 12px;
+    border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;
+  }
+  #applyRange:hover{background:#1677c0}
+
+  .kpi-strip{display:flex;gap:20px;flex:1;justify-content:center}
+  .kpi{text-align:center}
+  .kpi-val{font-size:18px;font-weight:700;color:var(--brand-blue)}
+  .kpi-lbl{font-size:10px;color:#8a9aaa;text-transform:uppercase;letter-spacing:.5px}
+
+  #dateBadge{font-size:12px;color:#8a9aaa;white-space:nowrap}
+  #staleWarn{font-size:11px;color:#f59e0b;font-weight:600;display:none;white-space:nowrap}
+  #refreshBtn{
+    background:var(--brand-red);border:none;color:#fff;padding:6px 14px;
+    border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;flex-shrink:0;
+  }
+  #refreshBtn:hover{background:#c0252b}
+
+  /* ── CONTENT AREA ── */
+  #content{flex:1;overflow:hidden;display:flex;flex-direction:column;padding-bottom:52px}
+
+  /* ── MAP ── */
+  #tabMap{flex:1;display:flex;flex-direction:column}
+  #mapEl{flex:1;width:100%;height:100%}
+
+  /* ── BOTTOM NAV ── */
+  #bottomNav{
+    position:fixed;bottom:0;left:0;right:0;height:52px;
+    background:var(--brand-dark);border-top:1px solid #2a3540;
+    display:flex;z-index:3000;
+  }
+  .nav-tab{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;cursor:pointer;border:none;background:transparent;color:#6a7a8a;
+    font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;
+    transition:color .2s;
+  }
+  .nav-tab .tab-icon{font-size:18px;line-height:1}
+  .nav-tab.active{color:var(--brand-red)}
+  .nav-tab:hover:not(.active){color:#c0c8d0}
+
+  /* ── TABS (non-map) ── */
+  .tab-page{display:none;flex:1;overflow-y:auto;padding:16px}
+  .tab-page.active{display:block}
+
+  /* ── TABLE STYLES ── */
+  .data-table{width:100%;border-collapse:collapse;font-size:13px}
+  .data-table th{
+    background:#1e2d36;color:#8a9aaa;text-transform:uppercase;font-size:10px;letter-spacing:.5px;
+    padding:10px 12px;text-align:left;position:sticky;top:0;z-index:1;cursor:pointer;white-space:nowrap;
+  }
+  .data-table th:hover{color:var(--text)}
+  .data-table th .sort-arrow{margin-left:4px;opacity:.5}
+  .data-table th.sorted .sort-arrow{opacity:1;color:var(--brand-blue)}
+  .data-table td{padding:9px 12px;border-bottom:1px solid #1e2d36;white-space:nowrap}
+  .data-table tr:hover td{background:#1e2d36;cursor:pointer}
+  .data-table tr.totals-row td{background:#1e2d36;font-weight:700;color:var(--brand-blue);border-top:2px solid #2a3540}
+  .data-table tr.totals-row:hover td{background:#253545}
+  .col-r{text-align:right}
+
+  /* labor color classes */
+  .labor-green{color:var(--green)}
+  .labor-yellow{color:var(--yellow)}
+  .labor-red{color:#ef4444}
+  .ot-red{color:#ef4444}
+
+  /* ── LEADERBOARD ── */
+  #tabLeaderboard .lb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+  .lb-card{
+    background:var(--brand-dark);border:1px solid #2a3540;border-radius:12px;
+    padding:20px;display:flex;flex-direction:column;gap:8px;
+    transition:transform .15s,box-shadow .15s;
+  }
+  .lb-card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,.5)}
+  .lb-rank{font-size:28px;font-weight:900;letter-spacing:-1px}
+  .lb-rank.gold{color:#f59e0b}
+  .lb-rank.silver{color:#94a3b8}
+  .lb-rank.bronze{color:#b45309}
+  .lb-rank.other{color:#6a7a8a}
+  .lb-medal{font-size:24px}
+  .lb-name{font-size:18px;font-weight:700}
+  .lb-sales{font-size:22px;font-weight:700;color:var(--brand-blue)}
+  .lb-wow{font-size:13px;font-weight:600}
+  .lb-wow.up{color:var(--green)}
+  .lb-wow.down{color:#ef4444}
+  .lb-wow.flat{color:#6a7a8a}
+
+  /* ── SLIDE PANEL ── */
+  #slidePanel{
+    position:fixed;right:-370px;top:56px;bottom:52px;width:360px;
+    background:var(--brand-dark);border-left:1px solid #2a3540;
+    overflow-y:auto;z-index:2000;transition:right .3s ease;
+    box-shadow:-4px 0 20px rgba(0,0,0,.5);
+  }
+  #slidePanel.open{right:0}
+  #panelClose{
+    position:absolute;top:12px;right:12px;background:rgba(0,0,0,.4);border:none;
+    color:var(--text);font-size:18px;cursor:pointer;z-index:1;
+    width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  }
+  .panel-inner{padding:20px}
+  .panel-name{font-size:20px;font-weight:700;margin-bottom:4px}
+  .status-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:12px}
+  .badge-ok{background:#15532a;color:#22c55e}
+  .badge-warn{background:#713f12;color:#eab308}
+  .badge-danger{background:#4c1010;color:#ef4444}
+  .panel-section{margin-bottom:16px}
+  .panel-section h4{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6a7a8a;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #2a3540}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .stat-item{background:#1e2d36;border-radius:6px;padding:8px 10px}
+  .stat-val{font-size:16px;font-weight:700;color:var(--text)}
+  .stat-lbl{font-size:10px;color:#6a7a8a;text-transform:uppercase;margin-top:2px}
+  .flag-pill{display:inline-block;background:#3d2f00;color:#eab308;border:1px solid #854d0e;border-radius:4px;padding:3px 8px;font-size:11px;margin:2px}
+  .server-row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px solid #2a3540}
+
+  /* ── SPARKLINE ── */
+  .sparkline-wrap{background:#1e2d36;border-radius:8px;padding:12px;overflow:hidden}
+  .sparkline-wrap svg{display:block;width:100%;overflow:visible}
+  .spark-bar{fill:#1e93da;cursor:pointer;transition:fill .15s}
+  .spark-bar:hover{fill:#5ab5f0}
+  .spark-bar.current-week{fill:#e33239}
+  .spark-bar.current-week:hover{fill:#f05a60}
+  .spark-tooltip{
+    position:fixed;background:#0f1923;border:1px solid #3a4a56;color:#f0f0f8;
+    font-size:11px;font-weight:600;padding:4px 8px;border-radius:5px;
+    pointer-events:none;z-index:9999;display:none;white-space:nowrap;
+  }
+
+  /* ── LOADING ── */
+  #loading{
+    position:fixed;inset:0;background:var(--brand-navy);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;z-index:9999;gap:16px;
+  }
+  #loading img{height:60px;animation:pulse 1.5s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+  #loading p{color:#6a7a8a;font-size:14px}
+
+  #errorBanner{
+    position:fixed;top:56px;left:0;right:0;background:#4c1010;color:#ef4444;
+    padding:10px 20px;text-align:center;z-index:5000;display:none;font-weight:600;font-size:13px;
+  }
+
+  .map-tooltip{background:#1a2429;border:1px solid #3a4a56;color:#f0f0f8;font-size:12px;font-weight:600;padding:4px 8px;border-radius:6px}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <img src="https://cdn.prod.website-files.com/6942ec7702201d9a4c1626b4/6945814389a8d77af25137bb_Logo%20white.svg" alt="Rreal Tacos">
+  <p>Loading command center…</p>
+</div>
+
+<div id="errorBanner"></div>
+<div class="spark-tooltip" id="sparkTooltip"></div>
+
+<!-- ── TOP BAR ── -->
+<div id="topbar">
+  <img src="https://cdn.prod.website-files.com/6942ec7702201d9a4c1626b4/6945814389a8d77af25137bb_Logo%20white.svg" alt="Rreal Tacos">
+  <div class="tb-sep"></div>
+
+  <select id="periodSelect" class="tb-select">
+    <option value="today">Today</option>
+    <option value="yesterday">Yesterday</option>
+    <option value="thisweek">This Week</option>
+    <option value="last7">Last 7 Days</option>
+    <option value="lastweek" selected>Last Week</option>
+    <option value="thismonth">This Month</option>
+    <option value="lastmonth">Last Month</option>
+    <option value="custom">Custom Date…</option>
+  </select>
+
+  <div id="customRange">
+    <input type="date" id="dateFrom">
+    <span style="color:#6a7a8a">→</span>
+    <input type="date" id="dateTo">
+    <button id="applyRange">Go</button>
+  </div>
+
+  <select id="locFilter" class="tb-select">
+    <option value="">All Locations</option>
+  </select>
+
+  <div class="tb-sep"></div>
+
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-val" id="kTotSales">—</div><div class="kpi-lbl">Net Sales</div></div>
+    <div class="kpi"><div class="kpi-val" id="kCovers">—</div><div class="kpi-lbl">Covers</div></div>
+    <div class="kpi"><div class="kpi-val" id="kAvgGuest">—</div><div class="kpi-lbl">Avg/Guest</div></div>
+    <div class="kpi"><div class="kpi-val" id="kRating">—</div><div class="kpi-lbl">Sunday ★</div></div>
+    <div class="kpi"><div class="kpi-val" id="kUnresolved">—</div><div class="kpi-lbl">Unresolved</div></div>
+  </div>
+
+  <span id="dateBadge"></span>
+  <span id="staleWarn"></span>
+  <button id="refreshBtn">⟳</button>
+</div>
+
+<!-- ── CONTENT AREA ── -->
+<div id="content">
+
+  <!-- Tab 1: Map -->
+  <div id="tabMap" style="display:flex;flex-direction:column;flex:1">
+    <div id="mapEl" style="flex:1;width:100%;"></div>
+  </div>
+
+  <!-- Tab 2: Sales Table -->
+  <div id="tabSales" class="tab-page">
+    <div style="overflow-x:auto">
+      <table class="data-table" id="salesTable">
+        <thead>
+          <tr>
+            <th data-col="name">Location <span class="sort-arrow">↕</span></th>
+            <th data-col="netSales" class="col-r sorted">Net Sales <span class="sort-arrow">↓</span></th>
+            <th data-col="coverCount" class="col-r">Covers <span class="sort-arrow">↕</span></th>
+            <th data-col="avgPerGuest" class="col-r">Avg/Guest <span class="sort-arrow">↕</span></th>
+            <th data-col="avgCheckSize" class="col-r">Avg Check <span class="sort-arrow">↕</span></th>
+            <th data-col="lunch" class="col-r">Lunch <span class="sort-arrow">↕</span></th>
+            <th data-col="dinner" class="col-r">Dinner <span class="sort-arrow">↕</span></th>
+            <th data-col="voidsPct" class="col-r">Voids % <span class="sort-arrow">↕</span></th>
+            <th data-col="compsPct" class="col-r">Comps % <span class="sort-arrow">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="salesBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 3: Labor -->
+  <div id="tabLabor" class="tab-page">
+    <div style="overflow-x:auto">
+      <table class="data-table" id="laborTable">
+        <thead>
+          <tr>
+            <th data-col="name">Location <span class="sort-arrow">↕</span></th>
+            <th data-col="laborPct" class="col-r sorted">Labor % <span class="sort-arrow">↓</span></th>
+            <th data-col="laborCost" class="col-r">Labor Cost <span class="sort-arrow">↕</span></th>
+            <th data-col="otCost" class="col-r">OT $ <span class="sort-arrow">↕</span></th>
+            <th data-col="totalHours" class="col-r">Total Hours <span class="sort-arrow">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="laborBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 4: Leaderboard -->
+  <div id="tabLeaderboard" class="tab-page">
+    <div class="lb-grid" id="lbGrid"></div>
+  </div>
+
+</div>
+
+<!-- ── BOTTOM NAV ── -->
+<div id="bottomNav">
+  <button class="nav-tab active" data-tab="tabMap" id="navMap">
+    <span class="tab-icon">🗺</span>Map
+  </button>
+  <button class="nav-tab" data-tab="tabSales" id="navSales">
+    <span class="tab-icon">📊</span>Sales
+  </button>
+  <button class="nav-tab" data-tab="tabLabor" id="navLabor">
+    <span class="tab-icon">⏱</span>Labor
+  </button>
+  <button class="nav-tab" data-tab="tabLeaderboard" id="navLeaderboard">
+    <span class="tab-icon">🏆</span>Leaderboard
+  </button>
+</div>
+
+<!-- ── SLIDE PANEL ── -->
+<div id="slidePanel">
+  <button id="panelClose">✕</button>
+  <div class="panel-inner" id="panelContent"></div>
+</div>
+
+<script>
+// ── Formatters ────────────────────────────────────────────────────────────────
+const fmt$ = n => n == null ? '—' : '$' + Number(n).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+const fmtN = (n, d=1) => n == null ? '—' : Number(n).toFixed(d);
+const fmtPct = n => n == null ? '—' : Number(n).toFixed(1) + '%';
+const fmtStar = n => n == null ? '—' : '★ ' + Number(n).toFixed(2);
+
+// ── Date helpers ──────────────────────────────────────────────────────────────
+function etNow() {
+  const d = new Date();
+  return new Date(d.getTime() + d.getTimezoneOffset() * 60000 + (-5 * 3600000));
+}
+function toYMD(d) {
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+}
+function toInputDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function periodToDateRange(period) {
+  const now   = etNow();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dow   = today.getDay();
+
+  const yesterday        = new Date(today); yesterday.setDate(today.getDate() - 1);
+  const startOfWeek      = new Date(today); startOfWeek.setDate(today.getDate() - dow);
+  const last7Start       = new Date(today); last7Start.setDate(today.getDate() - 6);
+  const startOfLastWeek  = new Date(startOfWeek); startOfLastWeek.setDate(startOfWeek.getDate() - 7);
+  const endOfLastWeek    = new Date(startOfWeek); endOfLastWeek.setDate(startOfWeek.getDate() - 1);
+  const startOfMonth     = new Date(today.getFullYear(), today.getMonth(), 1);
+  const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const endOfLastMonth   = new Date(today.getFullYear(), today.getMonth(), 0);
+
+  switch (period) {
+    case 'today':     return { from: today,            to: today,          label: 'Today' };
+    case 'yesterday': return { from: yesterday,        to: yesterday,      label: 'Yesterday' };
+    case 'thisweek':  return { from: startOfWeek,      to: today,          label: 'This Week' };
+    case 'last7':     return { from: last7Start,       to: today,          label: 'Last 7 Days' };
+    case 'lastweek':  return { from: startOfLastWeek,  to: endOfLastWeek,  label: 'Last Week' };
+    case 'thismonth': return { from: startOfMonth,     to: today,          label: 'This Month' };
+    case 'lastmonth': return { from: startOfLastMonth, to: endOfLastMonth, label: 'Last Month' };
+    default:          return { from: today,            to: today,          label: 'Today' };
+  }
+}
+function friendlyDate(ymd) {
+  const y = +ymd.slice(0,4), m = +ymd.slice(4,6)-1, d = +ymd.slice(6,8);
+  const dt = new Date(y, m, d);
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()] + ' '
+       + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m] + ' ' + d;
+}
+
+// ── Location coords ───────────────────────────────────────────────────────────
+const LOCATION_COORDS = {
+  'Midtown':       [33.7793, -84.3822],
+  'West Midtown':  [33.7794, -84.4156],
+  'Beltline':      [33.7708, -84.3598],
+  'Buckhead':      [33.8350, -84.3788],
+  'Decatur':       [33.7748, -84.2963],
+  'Chamblee':      [33.8896, -84.3001],
+  'Sandy Springs': [33.9304, -84.3733],
+  'Duluth':        [34.0029, -84.1447],
+  'Cumming':       [34.2073, -84.1401],
+  'Sugar Hill':    [34.1118, -84.0535],
+  'Lawrenceville': [33.9562, -83.9880],
+  'Woodstock':     [34.1015, -84.5194],
+};
+const LOCATION_PHOTOS = {
+  'Midtown':       '/location-photos/midtown.jpg',
+  'West Midtown':  '/location-photos/west_midtown.jpg',
+  'Beltline':      '/location-photos/beltline.jpg',
+  'Buckhead':      '/location-photos/buckhead.jpg',
+  'Decatur':       '/location-photos/decatur.jpg',
+  'Chamblee':      '/location-photos/chamblee.jpg',
+  'Sandy Springs': '/location-photos/sandy_springs.jpg',
+  'Duluth':        '/location-photos/duluth.jpg',
+  'Cumming':       '/location-photos/cumming.jpg',
+  'Sugar Hill':    '/location-photos/sugar_hill.jpg',
+  'Lawrenceville': '/location-photos/lawrenceville.jpg',
+  'Woodstock':     '/location-photos/woodstock.jpg',
+};
+
+// ── Districts ─────────────────────────────────────────────────────────────────
+const NORTH_LOCATIONS = ['Cumming', 'Duluth', 'Lawrenceville', 'Sugar Hill', 'Woodstock'];
+const DISTRICTS = {
+  'North District': NORTH_LOCATIONS,
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let DATA = {};
+let MAP  = null;
+let markers = {};
+let activePeriod = 'lastweek';
+let customFrom   = null;
+let customTo     = null;
+let activeTab    = 'tabMap';
+let salesSort    = { col: 'netSales', dir: -1 };
+let laborSort    = { col: 'laborPct', dir: -1 };
+
+// ── Map init ──────────────────────────────────────────────────────────────────
+function initMap() {
+  MAP = L.map('mapEl', { center: [33.92, -84.25], zoom: 10, zoomControl: true });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '©OpenStreetMap ©CartoDB', maxZoom: 19
+  }).addTo(MAP);
+}
+
+// ── Data loading ──────────────────────────────────────────────────────────────
+async function loadPeriod(period, fromYMD, toYMD) {
+  showLoading(true);
+
+  try {
+    let apiUrl;
+    let rangeLabel;
+
+    if (period === 'custom') {
+      if (!fromYMD || !toYMD) { showError('Select both dates first.'); showLoading(false); return; }
+      if (fromYMD > toYMD)    { showError('Start date must be before end date.'); showLoading(false); return; }
+      apiUrl = `/api/dashboard/all?from=${fromYMD}&to=${toYMD}`;
+      rangeLabel = `${friendlyDate(fromYMD)} – ${friendlyDate(toYMD)}`;
+    } else {
+      const { from, to, label } = periodToDateRange(period);
+      fromYMD = toYMD_d(from);
+      toYMD   = toYMD_d(to);
+      apiUrl  = `/api/dashboard/all?from=${fromYMD}&to=${toYMD}`;
+      rangeLabel = label;
+    }
+
+    const toastUrl = `/api/toast/period?from=${fromYMD}&to=${toYMD}`;
+    const [toastResp, dash, uber, tips, pnl, laborResp] = await Promise.all([
+      fetch(toastUrl).then(r => r.json()).catch(() => null),
+      fetch(apiUrl).then(r => r.json()).catch(() => ({ success: false })),
+      fetch('/api/ubereats').then(r => r.json()).catch(() => null),
+      fetch('/api/tipouts').then(r => r.json()).catch(() => null),
+      fetch('/api/pnl').then(r => r.json()).catch(() => null),
+      fetch('/api/labor/latest').then(r => r.json()).catch(() => null),
+    ]);
+
+    const mergedToast = toastResp?.success ? {
+      companySummary: toastResp.companySummary,
+      locations: toastResp.locations,
+      date: toastResp.from,
+      _periodLabel: rangeLabel,
+      _live: true,
+    } : (dash?.toast || null);
+
+    DATA = { toast: mergedToast, dash, uber, tips, pnl, laborResp, rangeLabel, period, fromYMD, toYMD };
+
+    document.getElementById('dateBadge').textContent = rangeLabel;
+
+    const staleEl = document.getElementById('staleWarn');
+    if (!mergedToast || mergedToast.companySummary?.totalNetSales === 0) {
+      staleEl.textContent = '⚠ No sales data for this period';
+      staleEl.style.display = 'inline';
+    } else {
+      staleEl.style.display = 'none';
+    }
+
+    populateLocFilter();
+    renderKPIs();
+    renderMap();
+    if (activeTab === 'tabSales')      renderSalesTable();
+    if (activeTab === 'tabLabor')      renderLaborTable();
+    if (activeTab === 'tabLeaderboard') renderLeaderboard();
+
+  } catch(e) {
+    showError('Failed to load: ' + e.message);
+    console.error(e);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function toYMD_d(d) {
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function showLoading(on) {
+  document.getElementById('loading').style.display = on ? 'flex' : 'none';
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 5000);
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+function renderKPIs() {
+  const cs  = DATA.toast?.companySummary;
+  const sun = DATA.dash?.sunday?.company;
+  const ov  = DATA.dash?.ovation;
+
+  document.getElementById('kTotSales').textContent   = cs  ? fmt$(cs.totalNetSales)      : '—';
+  document.getElementById('kCovers').textContent     = cs  ? Number(cs.totalCovers).toLocaleString() : '—';
+  document.getElementById('kAvgGuest').textContent   = cs  ? fmt$(cs.avgPerGuest)        : '—';
+  document.getElementById('kRating').textContent     = sun ? fmtStar(sun.avgRating)      : '—';
+  document.getElementById('kUnresolved').textContent = ov  ? (ov.unresolvedCount ?? '—') : '—';
+}
+
+// ── Filter helpers ────────────────────────────────────────────────────────────
+function getFilteredLocations() {
+  const filterVal  = document.getElementById('locFilter').value;
+  const isDistrict = filterVal.startsWith('district:');
+  const distName   = isDistrict ? filterVal.replace('district:', '') : null;
+  const distLocs   = distName ? (DISTRICTS[distName] || []) : null;
+  const locs       = DATA.toast?.locations || [];
+
+  return locs.filter(loc => {
+    if (distLocs) return distLocs.includes(loc.name);
+    if (filterVal) return loc.name === filterVal;
+    return true;
+  });
+}
+
+// ── Location filter ───────────────────────────────────────────────────────────
+function populateLocFilter() {
+  const sel = document.getElementById('locFilter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Locations</option>';
+
+  const distGroup = document.createElement('optgroup');
+  distGroup.label = '── Districts';
+  for (const [distName] of Object.entries(DISTRICTS)) {
+    const opt = document.createElement('option');
+    opt.value = `district:${distName}`;
+    opt.textContent = distName;
+    if (`district:${distName}` === cur) opt.selected = true;
+    distGroup.appendChild(opt);
+  }
+  sel.appendChild(distGroup);
+
+  const locGroup = document.createElement('optgroup');
+  locGroup.label = '── Individual';
+  const locs = [...(DATA.toast?.locations || [])].sort((a,b) => a.name.localeCompare(b.name));
+  for (const loc of locs) {
+    const opt = document.createElement('option');
+    opt.value = loc.name;
+    opt.textContent = loc.name;
+    if (loc.name === cur) opt.selected = true;
+    locGroup.appendChild(opt);
+  }
+  sel.appendChild(locGroup);
+}
+
+// ── Map render ────────────────────────────────────────────────────────────────
+function locationHealth(toastLoc, sunLoc) {
+  const flags  = toastLoc?.flags?.length || 0;
+  const rating = sunLoc?.avgRating || 0;
+  if (flags >= 3 || (rating > 0 && rating < 4.5)) return 'danger';
+  if (flags >= 1 || (rating > 0 && rating < 4.8)) return 'warn';
+  return 'ok';
+}
+function matchUberStore(stores, name) {
+  return stores?.find(s => s.name.replace(/^Rreal Tacos\s*/i,'').trim().toLowerCase() === name.toLowerCase());
+}
+
+function renderMap() {
+  for (const m of Object.values(markers)) MAP.removeLayer(m);
+  markers = {};
+
+  const locs       = getFilteredLocations();
+  const sunLocs    = DATA.dash?.sunday?.locations || [];
+  const uberStores = DATA.uber?.data?.stores || [];
+  const tipLocs    = DATA.tips?.data?.locations || {};
+  const maxSales   = Math.max(...locs.map(l => l.metrics?.netSales || 0), 1);
+
+  for (const loc of locs) {
+    const coords = LOCATION_COORDS[loc.name];
+    if (!coords) continue;
+
+    const sunLoc = sunLocs.find(s => s.name === loc.name);
+    const health = locationHealth(loc, sunLoc);
+    const color  = health === 'ok' ? '#22c55e' : health === 'warn' ? '#eab308' : '#e33239';
+    const sales  = loc.metrics?.netSales || 0;
+    const radius = Math.round(20 + (sales / maxSales) * 30);
+    const sz     = (radius + 14) * 2;
+    const cx     = sz / 2;
+
+    const svgHtml = `<svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="${cx}" cy="${cx}" r="${radius+10}" fill="${color}" fill-opacity="0.15">
+        <animate attributeName="r" from="${radius+4}" to="${radius+18}" dur="2s" repeatCount="indefinite"/>
+        <animate attributeName="fill-opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="${cx}" cy="${cx}" r="${radius}" fill="${color}" fill-opacity="0.85" stroke="#fff" stroke-width="2"/>
+      <text x="${cx}" y="${cx+4}" text-anchor="middle" fill="#fff" font-size="${Math.max(9,Math.round(radius*0.48))}px" font-weight="700" font-family="sans-serif">${fmt$(sales)}</text>
+    </svg>`;
+
+    const icon = L.divIcon({
+      html: `<div style="position:relative">${svgHtml}<div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:600;color:#fff;text-shadow:0 1px 3px #000,0 0 8px #000">${loc.name}</div></div>`,
+      className: '',
+      iconSize: [sz, sz + 20],
+      iconAnchor: [sz/2, sz/2],
+    });
+
+    const marker = L.marker(coords, { icon }).addTo(MAP);
+    marker.bindTooltip(`<b>${loc.name}</b><br>Net Sales: ${fmt$(sales)}`, { className: 'map-tooltip', offset: [0, -radius] });
+    marker.on('click', () => openPanel(loc, sunLoc, uberStores, tipLocs, health, color));
+    markers[loc.name] = marker;
+  }
+}
+
+// ── Sales Table ───────────────────────────────────────────────────────────────
+function renderSalesTable() {
+  const locs = getFilteredLocations();
+  const tbody = document.getElementById('salesBody');
+  const sunLocs   = DATA.dash?.sunday?.locations || [];
+  const uberStores = DATA.uber?.data?.stores || [];
+  const tipLocs    = DATA.tips?.data?.locations || {};
+
+  // Extract sortable rows
+  const rows = locs.map(loc => {
+    const m = loc.metrics || {};
+    return {
+      name:       loc.name,
+      netSales:   m.netSales || 0,
+      coverCount: m.coverCount || 0,
+      avgPerGuest: m.avgPerGuest || 0,
+      avgCheckSize: m.avgCheckSize || 0,
+      lunch:      m.daypart?.lunch?.sales || 0,
+      dinner:     m.daypart?.dinner?.sales || 0,
+      voidsPct:   m.voids?.pct || 0,
+      compsPct:   m.comps?.pct || 0,
+      _loc:       loc,
+      _sunLoc:    sunLocs.find(s => s.name === loc.name),
+      _uberStores: uberStores,
+      _tipLocs:    tipLocs,
+      _health:     locationHealth(loc, sunLocs.find(s => s.name === loc.name)),
+    };
+  });
+
+  rows.sort((a,b) => {
+    const v = salesSort.col === 'name'
+      ? a.name.localeCompare(b.name) * salesSort.dir
+      : (a[salesSort.col] - b[salesSort.col]) * salesSort.dir;
+    return v;
+  });
+
+  // Totals
+  const totals = rows.reduce((acc, r) => {
+    acc.netSales   += r.netSales;
+    acc.coverCount += r.coverCount;
+    acc.lunch      += r.lunch;
+    acc.dinner     += r.dinner;
+    return acc;
+  }, { netSales:0, coverCount:0, lunch:0, dinner:0 });
+  const totAvgGuest = totals.coverCount > 0 ? totals.netSales / totals.coverCount : 0;
+
+  tbody.innerHTML = rows.map(r => `
+    <tr data-loc="${r.name}" style="cursor:pointer">
+      <td>${r.name}</td>
+      <td class="col-r">${fmt$(r.netSales)}</td>
+      <td class="col-r">${r.coverCount.toLocaleString()}</td>
+      <td class="col-r">${fmt$(r.avgPerGuest)}</td>
+      <td class="col-r">${fmt$(r.avgCheckSize)}</td>
+      <td class="col-r">${fmt$(r.lunch)}</td>
+      <td class="col-r">${fmt$(r.dinner)}</td>
+      <td class="col-r">${fmtPct(r.voidsPct)}</td>
+      <td class="col-r">${fmtPct(r.compsPct)}</td>
+    </tr>
+  `).join('') + `
+    <tr class="totals-row">
+      <td>TOTAL</td>
+      <td class="col-r">${fmt$(totals.netSales)}</td>
+      <td class="col-r">${totals.coverCount.toLocaleString()}</td>
+      <td class="col-r">${fmt$(totAvgGuest)}</td>
+      <td class="col-r">—</td>
+      <td class="col-r">${fmt$(totals.lunch)}</td>
+      <td class="col-r">${fmt$(totals.dinner)}</td>
+      <td class="col-r">—</td>
+      <td class="col-r">—</td>
+    </tr>
+  `;
+
+  // Click rows to open panel
+  tbody.querySelectorAll('tr[data-loc]').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const locName = tr.dataset.loc;
+      const row = rows.find(r => r.name === locName);
+      if (!row) return;
+      openPanel(row._loc, row._sunLoc, row._uberStores, row._tipLocs, row._health, '#1e93da');
+    });
+  });
+
+  // Update sort headers
+  document.querySelectorAll('#salesTable th').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.col === salesSort.col);
+    const arrow = th.querySelector('.sort-arrow');
+    if (th.dataset.col === salesSort.col) {
+      arrow.textContent = salesSort.dir === -1 ? '↓' : '↑';
+    } else {
+      arrow.textContent = '↕';
+    }
+  });
+}
+
+// ── Labor Table ───────────────────────────────────────────────────────────────
+function getLaborData() {
+  // Try to build per-location labor from 7shifts data
+  const raw = DATA.laborResp;
+  if (!raw) return [];
+
+  // Check for structured locations object (ideal format)
+  if (raw.locations && typeof raw.locations === 'object' && !Array.isArray(raw.locations)) {
+    const entries = Object.entries(raw.locations);
+    if (entries.length > 0 && entries[0][1].laborPct !== undefined) {
+      return entries.map(([name, d]) => ({
+        name,
+        laborPct:  d.laborPct  ?? 0,
+        laborCost: d.laborCost ?? 0,
+        otCost:    d.otCost    ?? 0,
+        totalHours: d.totalHours ?? 0,
+      }));
+    }
+  }
+
+  // Fall back to reportsData daily sales and labor (single location only — 7shifts only gave us one)
+  const reports = raw.reportsData?.api_v2_reports_daily_sales_and_labor?.data || [];
+  if (reports.length > 0) {
+    // Aggregate all records
+    let totalLaborCost = 0, totalSales = 0, totalMinutes = 0, totalOT = 0;
+    for (const r of reports) {
+      totalLaborCost += (r.actual_labor_cost || 0) / 100; // stored as cents
+      totalSales     += (r.actual_sales     || 0) / 100;
+      totalMinutes   += r.actual_labor_minutes || 0;
+      totalOT        += r.actual_ot_minutes || 0;
+    }
+    const laborPct  = totalSales > 0 ? (totalLaborCost / totalSales) * 100 : 0;
+    const totalHours = totalMinutes / 60;
+    const otCost     = (totalOT / 60) * 15; // rough OT cost estimate
+
+    return [{
+      name:      'Midtown (7shifts)',
+      laborPct:  +laborPct.toFixed(1),
+      laborCost: +totalLaborCost.toFixed(0),
+      otCost:    +otCost.toFixed(0),
+      totalHours: +totalHours.toFixed(1),
+    }];
+  }
+
+  return [];
+}
+
+function laborColor(pct) {
+  if (pct < 20)  return 'labor-green';
+  if (pct <= 25) return 'labor-yellow';
+  return 'labor-red';
+}
+
+function renderLaborTable() {
+  const tbody = document.getElementById('laborBody');
+  let rows = getLaborData();
+
+  // Apply location filter
+  const filterVal  = document.getElementById('locFilter').value;
+  const isDistrict = filterVal.startsWith('district:');
+  const distName   = isDistrict ? filterVal.replace('district:', '') : null;
+  const distLocs   = distName ? (DISTRICTS[distName] || []) : null;
+
+  if (distLocs) rows = rows.filter(r => distLocs.includes(r.name));
+  else if (filterVal && !isDistrict) rows = rows.filter(r => r.name === filterVal);
+
+  rows.sort((a,b) => {
+    const v = laborSort.col === 'name'
+      ? a.name.localeCompare(b.name) * laborSort.dir
+      : (a[laborSort.col] - b[laborSort.col]) * laborSort.dir;
+    return v;
+  });
+
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#6a7a8a;padding:32px">No labor data available</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.name}</td>
+      <td class="col-r ${laborColor(r.laborPct)}">${fmtPct(r.laborPct)}</td>
+      <td class="col-r">${fmt$(r.laborCost)}</td>
+      <td class="col-r ${r.otCost > 500 ? 'ot-red' : ''}">${fmt$(r.otCost)}</td>
+      <td class="col-r">${fmtN(r.totalHours, 1)}h</td>
+    </tr>
+  `).join('');
+
+  // Update sort headers
+  document.querySelectorAll('#laborTable th').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.col === laborSort.col);
+    const arrow = th.querySelector('.sort-arrow');
+    if (th.dataset.col === laborSort.col) {
+      arrow.textContent = laborSort.dir === -1 ? '↓' : '↑';
+    } else {
+      arrow.textContent = '↕';
+    }
+  });
+}
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
+function renderLeaderboard() {
+  const grid = document.getElementById('lbGrid');
+  const locs = getFilteredLocations();
+
+  // Sort by net sales descending
+  const sorted = [...locs].sort((a,b) => (b.metrics?.netSales||0) - (a.metrics?.netSales||0));
+
+  // Compute WoW: compare current period vs prior equal-length period using pnl if available
+  // Use pnl data which has weekly net sales keyed by location
+  const pnlData = DATA.pnl?.data || [];
+
+  // Build prior-period comparison from north trend data (loaded separately if needed)
+  // For now use the toast data's own structure — if two same-length periods exist
+  // We'll try to infer from north trend weekly data for north locations
+  const northTrend = DATA.northTrend || null;
+
+  // Determine current week from fromYMD date
+  function getWoW(locName, currentSales) {
+    // Try north trend
+    if (northTrend && NORTH_LOCATIONS.includes(locName)) {
+      const weeks = Object.keys(northTrend).sort((a,b) => +a.slice(1) - +b.slice(1));
+      const latestWeek = weeks[weeks.length - 1];
+      const prevWeek   = weeks[weeks.length - 2];
+      const curr = northTrend[latestWeek]?.[locName]?.net;
+      const prev = northTrend[prevWeek]?.[locName]?.net;
+      if (curr != null && prev != null && prev > 0) {
+        return ((curr - prev) / prev) * 100;
+      }
+    }
+    return null;
+  }
+
+  const medals = ['🥇', '🥈', '🥉'];
+  const rankClasses = ['gold', 'silver', 'bronze'];
+
+  grid.innerHTML = sorted.map((loc, i) => {
+    const sales = loc.metrics?.netSales || 0;
+    const wow   = getWoW(loc.name, sales);
+    const rankCls = i < 3 ? rankClasses[i] : 'other';
+    const medal   = i < 3 ? medals[i] : '';
+
+    let wowHtml = '';
+    if (wow !== null) {
+      const cls = wow > 0 ? 'up' : wow < 0 ? 'down' : 'flat';
+      const sign = wow > 0 ? '▲' : wow < 0 ? '▼' : '—';
+      wowHtml = `<div class="lb-wow ${cls}">${sign} ${Math.abs(wow).toFixed(1)}% WoW</div>`;
+    }
+
+    return `
+      <div class="lb-card">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="lb-rank ${rankCls}">#${i+1}</div>
+          ${medal ? `<div class="lb-medal">${medal}</div>` : ''}
+          <div class="lb-name">${loc.name}</div>
+        </div>
+        <div class="lb-sales">${fmt$(sales)}</div>
+        ${wowHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Tab navigation ────────────────────────────────────────────────────────────
+function switchTab(tabId) {
+  activeTab = tabId;
+
+  // Show/hide tab pages
+  document.getElementById('tabMap').style.display = tabId === 'tabMap' ? 'flex' : 'none';
+  document.querySelectorAll('.tab-page').forEach(el => {
+    el.classList.toggle('active', el.id === tabId);
+  });
+
+  // Update nav
+  document.querySelectorAll('.nav-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabId);
+  });
+
+  // Invalidate map size when switching to map
+  if (tabId === 'tabMap' && MAP) {
+    setTimeout(() => MAP.invalidateSize(), 10);
+  }
+
+  // Render tab content
+  if (tabId === 'tabSales')      renderSalesTable();
+  if (tabId === 'tabLabor')      renderLaborTable();
+  if (tabId === 'tabLeaderboard') {
+    // Load north trend if not already fetched
+    if (!DATA.northTrend) {
+      fetch('/api/north/trend').then(r => r.json()).then(d => {
+        DATA.northTrend = d;
+        renderLeaderboard();
+      }).catch(() => renderLeaderboard());
+    } else {
+      renderLeaderboard();
+    }
+  }
+}
+
+// ── Panel: Labor section from 7shifts ────────────────────────────────────────
+function buildLaborSection(locName) {
+  const raw = DATA.laborResp;
+  if (!raw) return `<div style="color:#6a7a8a;font-size:12px">Labor data unavailable</div>`;
+
+  let ld = null;
+
+  // Try structured locations object
+  if (raw.locations && typeof raw.locations === 'object' && !Array.isArray(raw.locations)) {
+    ld = raw.locations[locName];
+  }
+
+  if (!ld) {
+    // Fall back gracefully
+    return `<div style="color:#6a7a8a;font-size:12px">No 7shifts data for ${locName}</div>`;
+  }
+
+  const laborPct  = ld.laborPct  ?? null;
+  const laborCost = ld.laborCost ?? null;
+  const otCost    = ld.otCost    ?? null;
+  const totalHours = ld.totalHours ?? null;
+
+  const pctColor = laborPct == null ? 'var(--text)' : laborPct < 20 ? 'var(--green)' : laborPct <= 25 ? 'var(--yellow)' : '#ef4444';
+  const otColor  = otCost != null && otCost > 500 ? '#ef4444' : 'var(--text)';
+
+  return `
+    <div class="stat-grid">
+      <div class="stat-item"><div class="stat-val" style="color:${pctColor}">${laborPct != null ? fmtPct(laborPct) : '—'}</div><div class="stat-lbl">Labor %</div></div>
+      <div class="stat-item"><div class="stat-val" style="color:${otColor}">${otCost != null ? fmt$(otCost) : '—'}</div><div class="stat-lbl">OT $</div></div>
+      <div class="stat-item"><div class="stat-val">${totalHours != null ? fmtN(totalHours, 1) + 'h' : '—'}</div><div class="stat-lbl">Total Hours</div></div>
+      <div class="stat-item"><div class="stat-val">${laborCost != null ? fmt$(laborCost) : '—'}</div><div class="stat-lbl">Est. Labor Cost</div></div>
+    </div>
+  `;
+}
+
+// ── Panel: Sales Trend sparkline ──────────────────────────────────────────────
+function buildSparklineSection(locName, currentWeekLabel) {
+  if (!NORTH_LOCATIONS.includes(locName)) return '';
+  if (!DATA.northTrend) return `<div class="panel-section"><h4>Sales Trend (W7–W16)</h4><div style="color:#6a7a8a;font-size:12px">Loading trend data…</div></div>`;
+
+  const trend = DATA.northTrend;
+  const weeks = Object.keys(trend).sort((a,b) => +a.slice(1) - +b.slice(1));
+  const values = weeks.map(w => trend[w]?.[locName]?.net ?? 0);
+  const maxVal = Math.max(...values, 1);
+
+  const W = 300, H = 80, BAR_W = 22, GAP = 8;
+  const totalW = weeks.length * (BAR_W + GAP) - GAP;
+  const scaleX = W / totalW;
+  const effectiveBarW = BAR_W * scaleX;
+  const effectiveGap  = GAP  * scaleX;
+
+  let bars = '';
+  weeks.forEach((week, i) => {
+    const val = values[i];
+    const barH = Math.max(4, (val / maxVal) * (H - 20));
+    const x = i * (effectiveBarW + effectiveGap);
+    const y = H - 16 - barH;
+    const isCurrent = week === currentWeekLabel;
+    const cls = isCurrent ? 'spark-bar current-week' : 'spark-bar';
+    bars += `
+      <rect class="${cls}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${effectiveBarW.toFixed(1)}" height="${barH.toFixed(1)}" rx="2"
+        data-week="${week}" data-val="${val}"/>
+      <text x="${(x + effectiveBarW/2).toFixed(1)}" y="${H.toFixed(1)}" text-anchor="middle"
+        fill="#6a7a8a" font-size="9" font-family="sans-serif">${week}</text>
+    `;
+  });
+
+  return `
+    <div class="panel-section">
+      <h4>Sales Trend (W7–W16)</h4>
+      <div class="sparkline-wrap">
+        <svg viewBox="0 0 ${W} ${H}" height="${H}">
+          ${bars}
+        </svg>
+      </div>
+    </div>
+  `;
+}
+
+// ── Slide panel ───────────────────────────────────────────────────────────────
+async function openPanel(loc, sunLoc, uberStores, tipLocs, health, color) {
+  const m  = loc.metrics || {};
+  const uberStore = matchUberStore(uberStores, loc.name);
+  const tipLoc    = tipLocs[loc.name];
+
+  const badgeCls   = health === 'ok' ? 'badge-ok' : health === 'warn' ? 'badge-warn' : 'badge-danger';
+  const badgeLabel = health === 'ok' ? '🟢 On Track' : health === 'warn' ? '🟡 Watch' : '🔴 Alert';
+  const photoUrl   = LOCATION_PHOTOS[loc.name] || '';
+  const flags      = (loc.flags || []).map(f => `<span class="flag-pill">${f}</span>`).join('') || '<span style="color:#6a7a8a;font-size:12px">None</span>';
+
+  let topServers = '<div style="color:#6a7a8a;font-size:12px">No tipout data</div>';
+  if (tipLoc?.servers?.length) {
+    topServers = [...tipLoc.servers]
+      .sort((a,b) => (b.totalPayout||0) - (a.totalPayout||0))
+      .slice(0,3)
+      .map(s => `<div class="server-row"><span>${s.firstName} ${s.lastName}</span><span style="color:var(--green)">${fmt$(s.totalPayout)}</span></div>`)
+      .join('');
+  }
+
+  const uberStatus = uberStore ? (uberStore.today?.online ? '🟢 Online' : '🔴 Offline') : '—';
+  const uberSales  = uberStore?.today?.sales ? fmt$(uberStore.today.sales) : '—';
+
+  // Fetch north trend if needed and location is North
+  if (NORTH_LOCATIONS.includes(loc.name) && !DATA.northTrend) {
+    try {
+      const td = await fetch('/api/north/trend').then(r => r.json());
+      DATA.northTrend = td;
+    } catch(e) {}
+  }
+
+  // Determine current week label (rough: use W16 as latest)
+  const currentWeek = DATA.northTrend ? Object.keys(DATA.northTrend).sort((a,b) => +b.slice(1) - +a.slice(1))[0] : null;
+
+  const sparkHtml = NORTH_LOCATIONS.includes(loc.name) ? buildSparklineSection(loc.name, currentWeek) : '';
+  const laborHtml = buildLaborSection(loc.name);
+
+  document.getElementById('panelContent').innerHTML = `
+    ${photoUrl ? `
+      <div style="width:100%;height:160px;overflow:hidden;border-radius:10px;margin-bottom:14px;position:relative;">
+        <img src="${photoUrl}" alt="${loc.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.display='none'">
+        <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(10,15,25,.95));padding:12px 14px;">
+          <div style="font-size:18px;font-weight:800;color:#fff">${loc.name}</div>
+          <span class="status-badge ${badgeCls}" style="margin-top:2px">${badgeLabel}</span>
+        </div>
+      </div>` : `
+      <div class="panel-name">${loc.name}</div>
+      <span class="status-badge ${badgeCls}">${badgeLabel}</span>`}
+
+    <div class="panel-section">
+      <h4>Net Sales</h4>
+      <div class="stat-grid">
+        <div class="stat-item"><div class="stat-val">${fmt$(m.netSales)}</div><div class="stat-lbl">Net Sales</div></div>
+        <div class="stat-item"><div class="stat-val">${m.coverCount != null ? Number(m.coverCount).toLocaleString() : '—'}</div><div class="stat-lbl">Covers</div></div>
+        <div class="stat-item"><div class="stat-val">${fmt$(m.avgPerGuest)}</div><div class="stat-lbl">Avg / Guest</div></div>
+        <div class="stat-item"><div class="stat-val">${fmt$(m.avgCheckSize)}</div><div class="stat-lbl">Avg Check</div></div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h4>Daypart</h4>
+      <div class="stat-grid">
+        <div class="stat-item"><div class="stat-val">${fmt$(m.daypart?.lunch?.sales)}</div><div class="stat-lbl">Lunch</div></div>
+        <div class="stat-item"><div class="stat-val">${fmt$(m.daypart?.dinner?.sales)}</div><div class="stat-lbl">Dinner</div></div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h4>Quality</h4>
+      <div class="stat-grid">
+        <div class="stat-item"><div class="stat-val">${fmtPct(m.voids?.pct)}</div><div class="stat-lbl">Voids %</div></div>
+        <div class="stat-item"><div class="stat-val">${fmtPct(m.comps?.pct)}</div><div class="stat-lbl">Comps %</div></div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h4>Sunday Pay</h4>
+      <div class="stat-grid">
+        <div class="stat-item"><div class="stat-val" style="color:var(--yellow)">${fmtStar(sunLoc?.avgRating)}</div><div class="stat-lbl">Rating</div></div>
+        <div class="stat-item"><div class="stat-val">${sunLoc?.adoption != null ? fmtPct(sunLoc.adoption) : '—'}</div><div class="stat-lbl">Adoption</div></div>
+        <div class="stat-item"><div class="stat-val">${sunLoc?.tipRate != null ? fmtPct(sunLoc.tipRate) : '—'}</div><div class="stat-lbl">Tip Rate</div></div>
+        <div class="stat-item"><div class="stat-val">${sunLoc?.totalReviews ?? '—'}</div><div class="stat-lbl">Reviews</div></div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h4>Labor</h4>
+      ${laborHtml}
+    </div>
+
+    ${sparkHtml}
+
+    <div class="panel-section">
+      <h4>UberEats</h4>
+      <div style="display:flex;align-items:center;padding:6px 0;font-size:13px">
+        <span>${uberStatus}</span>
+        <span style="color:var(--green);margin-left:auto">${uberSales}</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h4>Flags</h4>
+      <div>${flags}</div>
+    </div>
+
+    <div class="panel-section">
+      <h4>Top Servers (Period)</h4>
+      ${topServers}
+    </div>
+  `;
+
+  document.getElementById('slidePanel').classList.add('open');
+
+  // Attach sparkline tooltip listeners
+  document.querySelectorAll('.spark-bar').forEach(bar => {
+    bar.addEventListener('mouseenter', e => {
+      const tt = document.getElementById('sparkTooltip');
+      tt.textContent = `${bar.dataset.week}: ${fmt$(+bar.dataset.val)}`;
+      tt.style.display = 'block';
+    });
+    bar.addEventListener('mousemove', e => {
+      const tt = document.getElementById('sparkTooltip');
+      tt.style.left = (e.clientX + 10) + 'px';
+      tt.style.top  = (e.clientY - 28) + 'px';
+    });
+    bar.addEventListener('mouseleave', () => {
+      document.getElementById('sparkTooltip').style.display = 'none';
+    });
+  });
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+
+// Tab nav
+document.querySelectorAll('.nav-tab').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// Period dropdown
+document.getElementById('periodSelect').addEventListener('change', function() {
+  activePeriod = this.value;
+  const customEl = document.getElementById('customRange');
+
+  if (activePeriod === 'custom') {
+    const { from, to } = periodToDateRange('lastweek');
+    document.getElementById('dateFrom').value = toInputDate(from);
+    document.getElementById('dateTo').value   = toInputDate(to);
+    customEl.style.display = 'flex';
+  } else {
+    customEl.style.display = 'none';
+    loadPeriod(activePeriod);
+  }
+});
+
+// Custom date "Go"
+document.getElementById('applyRange').addEventListener('click', () => {
+  const fv = document.getElementById('dateFrom').value;
+  const tv = document.getElementById('dateTo').value;
+  if (!fv || !tv) { showError('Select both dates.'); return; }
+  customFrom = fv.replace(/-/g,'');
+  customTo   = tv.replace(/-/g,'');
+  if (customFrom > customTo) { showError('Start must be before end.'); return; }
+  loadPeriod('custom', customFrom, customTo);
+});
+
+// Location filter
+document.getElementById('locFilter').addEventListener('change', () => {
+  renderMap();
+  if (activeTab === 'tabSales')       renderSalesTable();
+  if (activeTab === 'tabLabor')       renderLaborTable();
+  if (activeTab === 'tabLeaderboard') renderLeaderboard();
+});
+
+// Refresh button
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  if (activePeriod === 'custom') {
+    loadPeriod('custom', customFrom, customTo);
+  } else {
+    loadPeriod(activePeriod);
+  }
+});
+
+// Close slide panel
+document.getElementById('panelClose').addEventListener('click', () => {
+  document.getElementById('slidePanel').classList.remove('open');
+  document.getElementById('sparkTooltip').style.display = 'none';
+});
+document.getElementById('mapEl').addEventListener('click', e => {
+  if (e.target === document.getElementById('mapEl'))
+    document.getElementById('slidePanel').classList.remove('open');
+});
+
+// Sales table sort
+document.querySelectorAll('#salesTable th').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (!col) return;
+    if (salesSort.col === col) salesSort.dir *= -1;
+    else { salesSort.col = col; salesSort.dir = col === 'name' ? 1 : -1; }
+    renderSalesTable();
+  });
+});
+
+// Labor table sort
+document.querySelectorAll('#laborTable th').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (!col) return;
+    if (laborSort.col === col) laborSort.dir *= -1;
+    else { laborSort.col = col; laborSort.dir = col === 'name' ? 1 : -1; }
+    renderLaborTable();
+  });
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+initMap();
+loadPeriod('lastweek');
+</script>
+</body>
+</html>

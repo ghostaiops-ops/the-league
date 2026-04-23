@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RREAL TACOS — OPERATIONS COMMAND</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+:root {
+  --obsidian:    #080808;
+  --charcoal:    #0E100C;
+  --earth:       #1A1505;
+  --terracotta:  #C2471A;
+  --gold:        #D4A843;
+  --gold-bright: #F0C040;
+  --jade:        #1A6B3C;
+  --jade-bright: #22A855;
+  --amber:       #D4841A;
+  --amber-bright:#F0A020;
+  --crimson:     #C41A1A;
+  --crimson-bright:#E83030;
+  --sand:        #E8D9B5;
+  --dust:        #7A6E55;
+  --smoke:       #2A2518;
+  --mono:        'Share Tech Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--obsidian);
+  color: var(--sand);
+  font-family: 'Rajdhani', sans-serif;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════
+   LOADING SCREEN
+═══════════════════════════════════════════════════════ */
+#loading-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  transition: opacity 0.8s ease;
+}
+#loading-screen.fade-out { opacity: 0; pointer-events: none; }
+
+.loading-logo {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 28px;
+  letter-spacing: 12px;
+  color: var(--gold);
+  text-shadow: 0 0 30px rgba(212, 168, 67, 0.6);
+  animation: goldPulse 2s ease-in-out infinite;
+}
+
+.loading-sub {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  letter-spacing: 6px;
+  color: var(--dust);
+  text-transform: uppercase;
+}
+
+.loading-bar-wrap {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--gold);
+  text-align: center;
+  line-height: 1.8;
+}
+
+.loading-bar-label {
+  font-size: 10px;
+  color: var(--dust);
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+}
+
+.loading-bar {
+  color: var(--jade-bright);
+  font-size: 14px;
+  text-shadow: 0 0 8px rgba(26, 107, 60, 0.8);
+}
+
+.loading-pct {
+  font-size: 24px;
+  color: var(--gold-bright);
+  text-shadow: 0 0 20px rgba(240, 192, 64, 0.8);
+}
+
+/* ═══════════════════════════════════════════════════════
+   SCANLINE EFFECT
+═══════════════════════════════════════════════════════ */
+.scanline::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.12) 2px,
+    rgba(0,0,0,0.12) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TOP BAR
+═══════════════════════════════════════════════════════ */
+#topbar {
+  position: relative;
+  height: 72px;
+  background: var(--charcoal);
+  border-bottom: 2px solid var(--gold);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 20px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.topbar-logo {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-logo svg {
+  height: 36px;
+  filter: drop-shadow(0 0 8px rgba(212, 168, 67, 0.4));
+}
+
+.topbar-center {
+  flex: 1;
+  text-align: center;
+}
+
+.topbar-title {
+  font-family: 'Cinzel', serif;
+  font-variant: small-caps;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 6px;
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(212, 168, 67, 0.5);
+  line-height: 1;
+}
+
+.topbar-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+#topbar-datetime {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--dust);
+  letter-spacing: 1px;
+}
+
+#topbar-status-badge {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+
+#topbar-status-badge.nominal {
+  color: var(--jade-bright);
+  border-color: var(--jade);
+  background: rgba(26, 107, 60, 0.15);
+}
+
+#topbar-status-badge.alert {
+  color: var(--crimson-bright);
+  border-color: var(--crimson);
+  background: rgba(196, 26, 26, 0.15);
+  animation: alertFlash 1s ease-in-out infinite;
+}
+
+.topbar-kpis {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.kpi-item {
+  text-align: center;
+  min-width: 72px;
+}
+
+.kpi-label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--dust);
+  text-transform: uppercase;
+  line-height: 1;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.kpi-value {
+  font-family: var(--mono);
+  font-size: 15px;
+  color: var(--gold-bright);
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(240, 192, 64, 0.4);
+}
+
+.kpi-value.alert-val {
+  color: var(--crimson-bright);
+  text-shadow: 0 0 10px rgba(232, 48, 48, 0.5);
+  animation: alertFlash 1.5s ease-in-out infinite;
+}
+
+.kpi-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--smoke);
+}
+
+/* ═══════════════════════════════════════════════════════
+   MAIN LAYOUT
+═══════════════════════════════════════════════════════ */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#main-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ═══════════════════════════════════════════════════════
+   MAP PANEL
+═══════════════════════════════════════════════════════ */
+#map-wrap {
+  position: relative;
+  flex: 0 0 60%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Tactical grid overlay */
+#map-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(212, 168, 67, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212, 168, 67, 0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 400;
+}
+
+/* Corner brackets — tactical frame effect */
+#map-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 60px rgba(8,8,8,0.6);
+  pointer-events: none;
+  z-index: 400;
+}
+
+.map-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  z-index: 450;
+  pointer-events: none;
+}
+.map-corner.tl { top:12px; left:12px; border-top:2px solid var(--gold); border-left:2px solid var(--gold); }
+.map-corner.tr { top:12px; right:12px; border-top:2px solid var(--gold); border-right:2px solid var(--gold); }
+.map-corner.bl { bottom:12px; left:12px; border-bottom:2px solid var(--gold); border-left:2px solid var(--gold); }
+.map-corner.br { bottom:12px; right:12px; border-bottom:2px solid var(--gold); border-right:2px solid var(--gold); }
+
+.map-label {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  letter-spacing: 6px;
+  color: rgba(212, 168, 67, 0.4);
+  pointer-events: none;
+  z-index: 450;
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════════════════
+   RADAR BLIP MARKERS
+═══════════════════════════════════════════════════════ */
+.radar-blip-wrap {
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+.blip-label {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  letter-spacing: 3px;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  pointer-events: none;
+}
+
+.blip-alert-text {
+  position: absolute;
+  bottom: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--crimson-bright);
+  white-space: nowrap;
+  animation: alertFlash 0.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.blip-outer {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid;
+  transform: translate(-50%, -50%);
+}
+
+.blip-inner {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+}
+
+.blip-ping {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+}
+
+/* Status colors */
+.blip-jade .blip-outer { width:20px; height:20px; border-color:var(--jade); }
+.blip-jade .blip-inner { background:var(--jade-bright); box-shadow:0 0 8px var(--jade-bright); }
+.blip-jade .blip-ping  { border-color:var(--jade); animation: blipPingJade 3s ease-out infinite; }
+.blip-jade .blip-label { color:var(--jade-bright); }
+.blip-jade .blip-outer { animation: outerRotate 8s linear infinite; }
+
+.blip-amber .blip-outer { width:20px; height:20px; border-color:var(--amber); }
+.blip-amber .blip-inner { background:var(--amber-bright); box-shadow:0 0 8px var(--amber-bright); }
+.blip-amber .blip-ping  { border-color:var(--amber); animation: blipPingAmber 1.8s ease-out infinite; }
+.blip-amber .blip-label { color:var(--amber-bright); }
+.blip-amber .blip-outer { animation: outerRotate 4s linear infinite; }
+
+.blip-crimson .blip-outer { width:20px; height:20px; border-color:var(--crimson); }
+.blip-crimson .blip-inner { background:var(--crimson-bright); box-shadow:0 0 12px var(--crimson-bright), 0 0 24px rgba(196,26,26,0.4); animation: innerCritical 0.5s ease-in-out infinite; }
+.blip-crimson .blip-ping  { border-color:var(--crimson); animation: blipPingCrimson 0.8s ease-out infinite; }
+.blip-crimson .blip-label { color:var(--crimson-bright); }
+.blip-crimson .blip-outer { animation: outerRotateFast 1.5s linear infinite; border-width:2px; }
+
+@keyframes outerRotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@keyframes outerRotateFast {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@keyframes blipPingJade {
+  0% { width:14px; height:14px; opacity:0.6; }
+  100% { width:40px; height:40px; opacity:0; }
+}
+@keyframes blipPingAmber {
+  0% { width:14px; height:14px; opacity:0.8; }
+  100% { width:36px; height:36px; opacity:0; }
+}
+@keyframes blipPingCrimson {
+  0% { width:14px; height:14px; opacity:1; }
+  100% { width:32px; height:32px; opacity:0; }
+}
+@keyframes innerCritical {
+  0%,100% { transform: translate(-50%,-50%) scale(1); }
+  50% { transform: translate(-50%,-50%) scale(1.3); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   RIGHT PANEL — UNIT STATUS BOARD
+═══════════════════════════════════════════════════════ */
+#unit-panel {
+  flex: 0 0 40%;
+  min-width: 0;
+  background: var(--charcoal);
+  border-left: 1px solid var(--smoke);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.unit-panel-header {
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--smoke);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.unit-panel-title {
+  font-family: 'Cinzel', serif;
+  font-variant: small-caps;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--gold);
+  text-shadow: 0 0 15px rgba(212, 168, 67, 0.4);
+}
+
+.unit-count-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--dust);
+  letter-spacing: 1px;
+}
+
+#unit-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#unit-list::-webkit-scrollbar { width: 4px; }
+#unit-list::-webkit-scrollbar-track { background: var(--charcoal); }
+#unit-list::-webkit-scrollbar-thumb { background: var(--smoke); border-radius: 2px; }
+
+.unit-card {
+  background: var(--earth);
+  border-left: 3px solid var(--jade);
+  border-top: 1px solid var(--smoke);
+  border-right: 1px solid var(--smoke);
+  border-bottom: 1px solid var(--smoke);
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.unit-card:hover {
+  background: #201808;
+  border-left-width: 4px;
+}
+
+.unit-card.active {
+  border: 1px solid var(--gold);
+  border-left: 3px solid var(--gold-bright);
+  background: #221900;
+  box-shadow: 0 0 12px rgba(212, 168, 67, 0.2), inset 0 0 20px rgba(212, 168, 67, 0.03);
+}
+
+.unit-card.status-amber { border-left-color: var(--amber); }
+.unit-card.status-amber:hover { border-left-color: var(--amber-bright); }
+.unit-card.status-crimson { border-left-color: var(--crimson); }
+.unit-card.status-crimson:hover { border-left-color: var(--crimson-bright); }
+
+.unit-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.unit-name {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.unit-status-badge {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.unit-status-badge.nominal {
+  color: var(--jade-bright);
+  background: rgba(26, 107, 60, 0.2);
+  border: 1px solid rgba(26, 107, 60, 0.4);
+}
+.unit-status-badge.warning {
+  color: var(--amber-bright);
+  background: rgba(212, 132, 26, 0.2);
+  border: 1px solid rgba(212, 132, 26, 0.4);
+}
+.unit-status-badge.critical {
+  color: var(--crimson-bright);
+  background: rgba(196, 26, 26, 0.2);
+  border: 1px solid rgba(196, 26, 26, 0.4);
+  animation: alertFlash 1.5s ease-in-out infinite;
+}
+
+.unit-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.unit-metrics {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.unit-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.unit-metric-label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--dust);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.unit-metric-value {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--sand);
+  line-height: 1.2;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SLIDE PANEL — TACTICAL BRIEFING
+═══════════════════════════════════════════════════════ */
+#slide-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 460px;
+  height: 100%;
+  background: var(--charcoal);
+  border-left: 2px solid var(--gold);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: -10px 0 40px rgba(0,0,0,0.7);
+}
+
+#slide-panel.open {
+  transform: translateX(0);
+}
+
+#slide-panel-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  background: var(--smoke);
+  border: 1px solid var(--dust);
+  color: var(--dust);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: all 0.15s;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+}
+#slide-panel-close:hover { background: var(--smoke); border-color: var(--gold); color: var(--gold); }
+
+/* Mission photo */
+#panel-photo {
+  position: relative;
+  height: 200px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+#panel-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.35) saturate(0.6);
+  transition: all 0.4s ease;
+}
+
+.panel-photo-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(8,8,8,0.2) 0%,
+    rgba(14,16,12,0.6) 60%,
+    rgba(14,16,12,0.95) 100%
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 16px;
+  text-align: center;
+}
+
+#panel-loc-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: 4px;
+  color: var(--gold);
+  text-shadow: 0 0 30px rgba(212, 168, 67, 0.8), 0 2px 8px rgba(0,0,0,0.8);
+  text-transform: uppercase;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+#panel-coords {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--dust);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.panel-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  animation: blinkDot 1s ease-in-out infinite;
+}
+
+@keyframes blinkDot {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+#panel-status-text {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+/* Panel scroll content */
+#panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+
+#panel-content::-webkit-scrollbar { width: 4px; }
+#panel-content::-webkit-scrollbar-track { background: var(--charcoal); }
+#panel-content::-webkit-scrollbar-thumb { background: var(--smoke); border-radius: 2px; }
+
+.section-divider {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--gold);
+  letter-spacing: 1px;
+  margin: 12px 0 8px;
+  display: block;
+}
+
+.tactical-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.tac-label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--dust);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  width: 110px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.tac-bar {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: -1px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.tac-value {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--sand);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.tac-sub {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--dust);
+  line-height: 1;
+  margin-left: 4px;
+}
+
+/* SITREP flags */
+.sitrep-flag {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.sitrep-icon {
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.sitrep-text {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+}
+
+.sitrep-flag.clear .sitrep-icon,
+.sitrep-flag.clear .sitrep-text { color: var(--jade-bright); }
+.sitrep-flag.warning .sitrep-icon,
+.sitrep-flag.warning .sitrep-text { color: var(--amber-bright); }
+.sitrep-flag.critical .sitrep-icon,
+.sitrep-flag.critical .sitrep-text { color: var(--crimson-bright); }
+
+/* Guest intel stars */
+.star-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stars-display {
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════════════════ */
+@keyframes alertFlash {
+  0%,100% { opacity:1; }
+  50% { opacity:0.25; }
+}
+
+@keyframes goldPulse {
+  0%,100% { text-shadow: 0 0 30px rgba(212, 168, 67, 0.6); }
+  50% { text-shadow: 0 0 60px rgba(212, 168, 67, 1), 0 0 100px rgba(212, 168, 67, 0.4); }
+}
+
+/* Leaflet overrides */
+.leaflet-control-zoom a {
+  background: var(--charcoal) !important;
+  color: var(--gold) !important;
+  border: 1px solid var(--smoke) !important;
+}
+.leaflet-control-zoom a:hover {
+  background: var(--earth) !important;
+  color: var(--gold-bright) !important;
+}
+.leaflet-control-attribution {
+  background: rgba(14,16,12,0.7) !important;
+  color: var(--dust) !important;
+  font-size: 8px !important;
+}
+.leaflet-control-attribution a { color: var(--dust) !important; }
+
+/* No border/arrow on popup */
+.leaflet-popup-content-wrapper {
+  background: var(--earth) !important;
+  border: 1px solid var(--gold) !important;
+  border-radius: 2px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.8) !important;
+}
+.leaflet-popup-tip { background: var(--gold) !important; }
+.leaflet-popup-content { margin: 0 !important; }
+
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════
+     LOADING SCREEN
+════════════════════════════════════════════════════ -->
+<div id="loading-screen">
+  <img src="https://cdn.prod.website-files.com/6942ec7702201d9a4c1626b4/6945814389a8d77af25137bb_Logo%20white.svg" 
+       alt="Rreal Tacos" style="height:64px;margin-bottom:8px;animation:goldPulse 2s ease-in-out infinite;filter:drop-shadow(0 0 20px rgba(212,168,67,0.6))">
+  <div class="loading-sub" style="text-align:center">Operations Intelligence System · Atlanta Command</div>
+  <div class="loading-bar-wrap" style="text-align:center">
+    <div class="loading-bar-label">LOADING OPERATIONS DATA</div>
+    <div class="loading-bar" id="loading-bar-chars">████████░░░░░░░░</div>
+    <div class="loading-pct" id="loading-pct">0%</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     MAIN APP
+════════════════════════════════════════════════════ -->
+<div id="app" style="display:none;">
+
+  <!-- TOP BAR -->
+  <div id="topbar" class="scanline">
+    <!-- Logo -->
+    <div class="topbar-logo">
+      <svg viewBox="0 0 120 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <text y="28" font-family="Cinzel, serif" font-size="22" font-weight="900" fill="#D4A843" letter-spacing="4">RREAL</text>
+        <text x="4" y="36" font-family="Rajdhani, sans-serif" font-size="9" font-weight="600" fill="#7A6E55" letter-spacing="6">TACOS</text>
+      </svg>
+    </div>
+
+    <!-- Center -->
+    <div class="topbar-center">
+      <div class="topbar-title">Operations Command</div>
+      <div class="topbar-status-row">
+        <span id="topbar-datetime" class="mono">—</span>
+        <span id="topbar-status-badge" class="nominal">● SITUATION NORMAL</span>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="topbar-kpis">
+      <div class="kpi-item">
+        <span class="kpi-label">Net Rev</span>
+        <span class="kpi-value" id="kpi-rev">—</span>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-item">
+        <span class="kpi-label">Covers</span>
+        <span class="kpi-value" id="kpi-covers">—</span>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-item">
+        <span class="kpi-label">Satisfaction</span>
+        <span class="kpi-value" id="kpi-stars">—</span>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-item">
+        <span class="kpi-label">Tip Rate</span>
+        <span class="kpi-value" id="kpi-tip">—</span>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-item">
+        <span class="kpi-label">Alerts</span>
+        <span class="kpi-value" id="kpi-alerts">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN BODY -->
+  <div id="main-body">
+
+    <!-- MAP -->
+    <div id="map-wrap">
+      <div class="map-corner tl"></div>
+      <div class="map-corner tr"></div>
+      <div class="map-corner bl"></div>
+      <div class="map-corner br"></div>
+      <div class="map-label">METRO ATLANTA OPERATIONAL AREA</div>
+      <div id="map"></div>
+    </div>
+
+    <!-- UNIT STATUS PANEL -->
+    <div id="unit-panel">
+      <div class="unit-panel-header">
+        <span class="unit-panel-title">Unit Status Board</span>
+        <span class="unit-count-badge" id="unit-count-badge">0 UNITS REPORTING</span>
+      </div>
+      <div id="unit-list">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- SLIDE PANEL (TACTICAL BRIEFING) -->
+    <div id="slide-panel">
+      <button id="slide-panel-close" onclick="closeSlidepanel()">✕</button>
+
+      <div id="panel-photo">
+        <img id="panel-photo-img" src="" alt=""/>
+        <div class="panel-photo-overlay">
+          <div id="panel-loc-name">—</div>
+          <div id="panel-coords">—</div>
+          <div class="panel-status-indicator">
+            <div class="panel-status-dot" id="panel-status-dot"></div>
+            <span id="panel-status-text">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-content">
+        <!-- populated dynamically -->
+      </div>
+    </div>
+
+  </div><!-- /#main-body -->
+</div><!-- /#app -->
+
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════════════════════
+const LOCATION_COORDS = {
+  'Midtown':       [33.7793, -84.3822],
+  'West Midtown':  [33.7794, -84.4156],
+  'Beltline':      [33.7708, -84.3598],
+  'Buckhead':      [33.8350, -84.3788],
+  'Decatur':       [33.7748, -84.2963],
+  'Chamblee':      [33.8896, -84.3001],
+  'Sandy Springs': [33.9304, -84.3733],
+  'Duluth':        [34.0029, -84.1447],
+  'Cumming':       [34.2073, -84.1401],
+  'Sugar Hill':    [34.1118, -84.0535],
+  'Lawrenceville': [33.9562, -83.9880],
+  'Woodstock':     [34.1015, -84.5194],
+};
+
+const LOCATION_PHOTOS = {
+  'Midtown':       '/location-photos/midtown.jpg',
+  'West Midtown':  '/location-photos/west_midtown.jpg',
+  'Beltline':      '/location-photos/beltline.jpg',
+  'Buckhead':      '/location-photos/buckhead.jpg',
+  'Decatur':       '/location-photos/decatur.jpg',
+  'Chamblee':      '/location-photos/chamblee.jpg',
+  'Sandy Springs': '/location-photos/sandy_springs.jpg',
+  'Duluth':        '/location-photos/duluth.jpg',
+  'Cumming':       '/location-photos/cumming.jpg',
+  'Sugar Hill':    '/location-photos/sugar_hill.jpg',
+  'Lawrenceville': '/location-photos/lawrenceville.jpg',
+  'Woodstock':     '/location-photos/woodstock.jpg',
+};
+
+// ══════════════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════════════
+function fmt$(val) {
+  if (val == null || isNaN(val)) return '—';
+  return '$' + Math.round(val).toLocaleString();
+}
+function fmtPct(val) {
+  if (val == null || isNaN(val)) return '—';
+  return val.toFixed(1) + '%';
+}
+function fmtNum(val) {
+  if (val == null || isNaN(val)) return '—';
+  return Math.round(val).toLocaleString();
+}
+
+// Build ASCII progress bar
+function asciiBar(pct, len = 16, colorClass = 'gold') {
+  const filled = Math.round(Math.min(1, Math.max(0, pct)) * len);
+  const empty  = len - filled;
+  const colorMap = {
+    gold:   '#D4A843',
+    jade:   '#22A855',
+    amber:  '#F0A020',
+    crimson:'#E83030',
+    sand:   '#E8D9B5',
+  };
+  const col = colorMap[colorClass] || colorMap.gold;
+  const blocks = '█'.repeat(filled) + '░'.repeat(empty);
+  return `<span style="color:${col};text-shadow:0 0 4px ${col}60;">${blocks}</span>`;
+}
+
+// Stars
+function renderStars(rating) {
+  if (!rating) return '—';
+  const full  = Math.floor(rating);
+  const half  = rating - full >= 0.4 ? 1 : 0;
+  const empty = 5 - full - half;
+  return '<span style="color:var(--gold-bright);">' +
+    '★'.repeat(full) +
+    (half ? '½' : '') +
+    '<span style="color:var(--smoke);">' + '★'.repeat(empty) + '</span>' +
+    '</span>';
+}
+
+// Section divider
+function secDiv(label) {
+  const dashes = '━'.repeat(Math.max(1, 38 - label.length - 4));
+  return `<span class="section-divider">━━━ ${label} ${dashes}</span>`;
+}
+
+// Determine blip status from loc
+function getStatus(loc) {
+  if (!loc) return 'jade';
+  const flags = loc.flags || [];
+  const laborPct = loc.labor?.laborPct ?? 0;
+  // Critical: any flags mentioning CRITICAL/ERROR, or labor > 32%
+  const hasCritical = flags.some(f => /critical|error|alert/i.test(f)) || laborPct > 32;
+  // Warning: flags or labor 26-32%
+  const hasWarning = flags.length > 0 || (laborPct >= 26 && laborPct <= 32);
+  if (hasCritical) return 'crimson';
+  if (hasWarning)  return 'amber';
+  return 'jade';
+}
+
+function statusLabel(status) {
+  if (status === 'crimson') return 'CRITICAL';
+  if (status === 'amber')   return 'WARNING';
+  return 'NOMINAL';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════════════
+let DATA = {};
+let map  = null;
+let markers = {};
+let selectedLoc = null;
+
+// ══════════════════════════════════════════════════════════════════════
+// CLOCK
+// ══════════════════════════════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const d = days[now.getDay()];
+  const m = months[now.getMonth()];
+  const dd = String(now.getDate()).padStart(2,'0');
+  const yr = now.getFullYear();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const ss = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('topbar-datetime').textContent =
+    `${d} ${dd} ${m} ${yr}  ·  ${hh}:${mm}:${ss} LOCAL`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ══════════════════════════════════════════════════════════════════════
+// LOADING ANIMATION
+// ══════════════════════════════════════════════════════════════════════
+const BAR_CHARS = 20;
+let loadPct = 0;
+let loadTarget = 0;
+let loadInterval = null;
+
+function startLoadAnim() {
+  loadInterval = setInterval(() => {
+    if (loadPct < loadTarget) {
+      loadPct = Math.min(loadPct + 2, loadTarget);
+    } else if (loadPct < 92) {
+      loadPct += 0.4;
+    }
+    const filled = Math.round(loadPct / 100 * BAR_CHARS);
+    const empty  = BAR_CHARS - filled;
+    document.getElementById('loading-bar-chars').textContent =
+      '█'.repeat(filled) + '░'.repeat(empty);
+    document.getElementById('loading-pct').textContent = Math.round(loadPct) + '%';
+  }, 60);
+}
+
+function finishLoad() {
+  loadTarget = 100;
+  loadPct = 100;
+  const filled = BAR_CHARS;
+  document.getElementById('loading-bar-chars').textContent = '█'.repeat(filled);
+  document.getElementById('loading-pct').textContent = '100%';
+  clearInterval(loadInterval);
+  setTimeout(() => {
+    const ls = document.getElementById('loading-screen');
+    ls.classList.add('fade-out');
+    document.getElementById('app').style.display = 'flex';
+    setTimeout(() => ls.style.display = 'none', 900);
+  }, 400);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// MAP INIT
+// ══════════════════════════════════════════════════════════════════════
+function initMap() {
+  map = L.map('map', {
+    center: [33.92, -84.24],
+    zoom: 10,
+    zoomControl: true,
+    attributionControl: true,
+  });
+
+  L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 18,
+    }
+  ).addTo(map);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// RADAR BLIP MARKER
+// ══════════════════════════════════════════════════════════════════════
+function createBlipIcon(locName, status) {
+  const statusClass = `blip-${status}`;
+  const alertText = status === 'crimson'
+    ? `<div class="blip-alert-text">◉ ALERT</div>` : '';
+
+  const html = `
+    <div class="radar-blip-wrap ${statusClass}">
+      ${alertText}
+      <div class="blip-label">${locName.toUpperCase()}</div>
+      <div class="blip-ping"></div>
+      <div class="blip-outer"></div>
+      <div class="blip-inner"></div>
+    </div>`;
+
+  return L.divIcon({
+    html,
+    className: '',
+    iconSize:  [0, 0],
+    iconAnchor:[0, 0],
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// RENDER MARKERS
+// ══════════════════════════════════════════════════════════════════════
+function renderMarkers() {
+  // Clear old
+  Object.values(markers).forEach(m => m.remove());
+  markers = {};
+
+  const locs = Object.values(DATA);
+  locs.forEach(loc => {
+    const coords = LOCATION_COORDS[loc.name];
+    if (!coords) return;
+    const status = getStatus(loc);
+    const icon = createBlipIcon(loc.name, status);
+    const marker = L.marker(coords, { icon }).addTo(map);
+    marker.on('click', () => selectLocation(loc.name));
+    markers[loc.name] = marker;
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// RENDER UNIT LIST
+// ══════════════════════════════════════════════════════════════════════
+function renderUnitList() {
+  const locs = Object.values(DATA);
+  const el = document.getElementById('unit-list');
+  const badge = document.getElementById('unit-count-badge');
+  badge.textContent = `${locs.length} UNIT${locs.length !== 1 ? 'S' : ''} REPORTING`;
+
+  // Sort: critical first, then warning, then nominal
+  const statusOrder = { crimson: 0, amber: 1, jade: 2 };
+  locs.sort((a, b) => {
+    const sa = statusOrder[getStatus(a)] ?? 9;
+    const sb = statusOrder[getStatus(b)] ?? 9;
+    return sa - sb || (a.name || '').localeCompare(b.name || '');
+  });
+
+  el.innerHTML = locs.map(loc => {
+    const status     = getStatus(loc);
+    const statusLbl  = statusLabel(status);
+    const borderClass = status === 'crimson' ? 'status-crimson' : status === 'amber' ? 'status-amber' : '';
+    const badgeClass  = status === 'crimson' ? 'critical' : status === 'amber' ? 'warning' : 'nominal';
+    const rev  = fmt$(loc.metrics?.netSales);
+    const lab  = fmtPct(loc.labor?.laborPct);
+    const cvr  = fmtNum(loc.metrics?.coverCount);
+    return `
+      <div class="unit-card ${borderClass}" onclick="selectLocation('${loc.name.replace(/'/g,"\\'")}')">
+        <div class="unit-card-top">
+          <span class="unit-name">${loc.name}</span>
+          <span class="unit-status-badge ${badgeClass}">
+            <span class="unit-status-dot"></span>${statusLbl}
+          </span>
+        </div>
+        <div class="unit-metrics">
+          <div class="unit-metric">
+            <span class="unit-metric-label">Rev</span>
+            <span class="unit-metric-value">${rev}</span>
+          </div>
+          <div class="unit-metric">
+            <span class="unit-metric-label">Labor</span>
+            <span class="unit-metric-value">${lab}</span>
+          </div>
+          <div class="unit-metric">
+            <span class="unit-metric-label">Covers</span>
+            <span class="unit-metric-value">${cvr}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// UPDATE TOPBAR KPIs
+// ══════════════════════════════════════════════════════════════════════
+function updateKPIs() {
+  const locs = Object.values(DATA);
+  const totalRev    = locs.reduce((s,l) => s + (l.metrics?.netSales   || 0), 0);
+  const totalCovers = locs.reduce((s,l) => s + (l.metrics?.coverCount || 0), 0);
+  const alertCount  = locs.filter(l => getStatus(l) !== 'jade').length;
+
+  // Average star rating
+  const ratedLocs = locs.filter(l => l._sunday?.avgRating > 0);
+  const avgStars = ratedLocs.length
+    ? ratedLocs.reduce((s,l) => s + l._sunday.avgRating, 0) / ratedLocs.length
+    : null;
+
+  // Average tip rate
+  const tippedLocs = locs.filter(l => l._sunday?.tipRate > 0);
+  const avgTip = tippedLocs.length
+    ? tippedLocs.reduce((s,l) => s + l._sunday.tipRate, 0) / tippedLocs.length
+    : null;
+
+  document.getElementById('kpi-rev').textContent    = fmt$(totalRev);
+  document.getElementById('kpi-covers').textContent = fmtNum(totalCovers);
+  document.getElementById('kpi-stars').textContent  = avgStars ? `★${avgStars.toFixed(2)}` : '—';
+  document.getElementById('kpi-tip').textContent    = avgTip ? fmtPct(avgTip) : '—';
+
+  const alertEl = document.getElementById('kpi-alerts');
+  alertEl.textContent = alertCount > 0 ? `${alertCount} ⚠` : '0';
+  alertEl.className   = alertCount > 0 ? 'kpi-value alert-val' : 'kpi-value';
+
+  // Status badge
+  const badge = document.getElementById('topbar-status-badge');
+  const critCount = locs.filter(l => getStatus(l) === 'crimson').length;
+  if (critCount > 0) {
+    badge.textContent = `◉ ALERT ACTIVE`;
+    badge.className   = 'alert';
+  } else {
+    badge.textContent = `● SITUATION NORMAL`;
+    badge.className   = 'nominal';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SELECT LOCATION → SLIDE PANEL
+// ══════════════════════════════════════════════════════════════════════
+function selectLocation(name) {
+  selectedLoc = name;
+  const loc    = DATA[name];
+  const coords = LOCATION_COORDS[name];
+  const photo  = LOCATION_PHOTOS[name] || '';
+  const status = getStatus(loc);
+
+  // Highlight unit card
+  document.querySelectorAll('.unit-card').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.unit-card').forEach(c => {
+    const nameEl = c.querySelector('.unit-name');
+    if (nameEl && nameEl.textContent === name) c.classList.add('active');
+  });
+
+  // Fly map to location
+  if (coords) {
+    map.flyTo(coords, 13, { duration: 1.2 });
+  }
+
+  // Photo
+  const img = document.getElementById('panel-photo-img');
+  if (photo) {
+    img.src = photo;
+    img.style.filter = 'brightness(0.35) saturate(0.6)';
+  } else {
+    img.src = '';
+  }
+
+  // Name & coords
+  document.getElementById('panel-loc-name').textContent = name.toUpperCase();
+  document.getElementById('panel-coords').textContent =
+    coords ? `${coords[0].toFixed(4)}°N  ${Math.abs(coords[1]).toFixed(4)}°W` : '——';
+
+  // Status dot & text
+  const dotEl  = document.getElementById('panel-status-dot');
+  const textEl = document.getElementById('panel-status-text');
+  const colors = { jade:'#22A855', amber:'#F0A020', crimson:'#E83030' };
+  dotEl.style.background = colors[status];
+  textEl.style.color     = colors[status];
+  textEl.textContent     = statusLabel(status);
+
+  // Content
+  buildPanelContent(loc, status);
+
+  // Open panel
+  document.getElementById('slide-panel').classList.add('open');
+}
+
+function closeSlidepanel() {
+  document.getElementById('slide-panel').classList.remove('open');
+  document.querySelectorAll('.unit-card').forEach(c => c.classList.remove('active'));
+  selectedLoc = null;
+  // Zoom back out
+  map.flyTo([33.92, -84.24], 10, { duration: 1 });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// BUILD PANEL CONTENT
+// ══════════════════════════════════════════════════════════════════════
+function buildPanelContent(loc, status) {
+  const el = document.getElementById('panel-content');
+  const m  = loc?.metrics || {};
+  const lp = loc?.labor   || {};
+  const dm = m.diningMix  || {};
+  const dp = m.daypart    || {};
+  const s  = loc?.sunday  || {};
+  const flags = loc?.flags || [];
+
+  const netSales   = m.netSales    || 0;
+  const avgGuest   = m.avgPerGuest || 0;
+  const covers     = m.coverCount  || 0;
+  const laborPct   = lp.laborPct   || 0;
+  const lunchSales = dp.lunch?.sales  || 0;
+  const lunchCvr   = dp.lunch?.covers || 0;
+  const dinnerSales= dp.dinner?.sales  || 0;
+  const dinnerCvr  = dp.dinner?.covers || 0;
+  const dineInPct  = dm.dineInPct  || 0;
+  const takeoutPct = dm.takeoutPct || 0;
+  const delivPct   = dm.deliveryPct|| 0;
+
+  // Rev bar: vs 25k benchmark
+  const revMax     = 30000;
+  const revPct     = Math.min(1, netSales / revMax);
+  // AvgGuest bar: vs $20 benchmark
+  const avgMax     = 20;
+  const avgPct     = Math.min(1, avgGuest / avgMax);
+  // Labor bar: inverted (lower is better), 32% = max danger
+  const laborBarPct  = Math.min(1, laborPct / 100);
+  const laborColor = laborPct > 30 ? 'crimson' : laborPct > 24 ? 'amber' : 'jade';
+  // Lunch / dinner
+  const lunchMax   = 8000;
+  const dinnerMax  = 18000;
+  // Dining mix
+  const totalMix   = dineInPct + takeoutPct + delivPct;
+  const dineInB    = totalMix > 0 ? dineInPct  / totalMix : 0;
+  const takeoutB   = totalMix > 0 ? takeoutPct / totalMix : 0;
+  const delivB     = totalMix > 0 ? delivPct   / totalMix : 0;
+
+  let html = '';
+
+  // ── REVENUE INTEL
+  html += secDiv('REVENUE INTEL');
+  html += `<div class="tactical-row">
+    <span class="tac-label">NET REVENUE</span>
+    ${asciiBar(revPct, 14, 'gold')}
+    <span class="tac-value">&nbsp;${fmt$(netSales)}</span>
+  </div>`;
+  html += `<div class="tactical-row">
+    <span class="tac-label">AVG / COVER</span>
+    ${asciiBar(avgPct, 14, 'sand')}
+    <span class="tac-value">&nbsp;${fmt$(avgGuest)}</span>
+  </div>`;
+  html += `<div class="tactical-row">
+    <span class="tac-label">COVERS</span>
+    ${asciiBar(Math.min(1, covers / 500), 14, 'sand')}
+    <span class="tac-value">&nbsp;${fmtNum(covers)}</span>
+  </div>`;
+
+  // ── PERSONNEL
+  html += secDiv('PERSONNEL');
+  html += `<div class="tactical-row">
+    <span class="tac-label">LABOR COST</span>
+    ${asciiBar(laborBarPct, 14, laborColor)}
+    <span class="tac-value" style="color:${laborColor==='crimson'?'var(--crimson-bright)':laborColor==='amber'?'var(--amber-bright)':'var(--sand)'};">&nbsp;${fmtPct(laborPct)}</span>
+  </div>`;
+
+  // ── OPS TEMPO
+  html += secDiv('OPS TEMPO');
+  html += `<div class="tactical-row">
+    <span class="tac-label">LUNCH SORTIE</span>
+    ${asciiBar(Math.min(1, lunchSales / lunchMax), 10, 'gold')}
+    <span class="tac-value">&nbsp;${fmt$(lunchSales)}</span>
+    <span class="tac-sub">${lunchCvr ? fmtNum(lunchCvr) + ' cvrs' : ''}</span>
+  </div>`;
+  html += `<div class="tactical-row">
+    <span class="tac-label">DINNER SORTIE</span>
+    ${asciiBar(Math.min(1, dinnerSales / dinnerMax), 10, 'gold')}
+    <span class="tac-value">&nbsp;${fmt$(dinnerSales)}</span>
+    <span class="tac-sub">${dinnerCvr ? fmtNum(dinnerCvr) + ' cvrs' : ''}</span>
+  </div>`;
+
+  // ── DELIVERY VECTOR
+  if (totalMix > 0) {
+    html += secDiv('DELIVERY VECTOR');
+    html += `<div class="tactical-row">
+      <span class="tac-label">DINE IN</span>
+      ${asciiBar(dineInB, 14, 'jade')}
+      <span class="tac-value">&nbsp;${fmtPct(dineInPct)}</span>
+    </div>`;
+    html += `<div class="tactical-row">
+      <span class="tac-label">TAKEOUT</span>
+      ${asciiBar(takeoutB, 14, 'amber')}
+      <span class="tac-value">&nbsp;${fmtPct(takeoutPct)}</span>
+    </div>`;
+    html += `<div class="tactical-row">
+      <span class="tac-label">DELIVERY</span>
+      ${asciiBar(delivB, 14, 'sand')}
+      <span class="tac-value">&nbsp;${fmtPct(delivPct)}</span>
+    </div>`;
+  }
+
+  // ── SITREP
+  html += secDiv('SITREP');
+  if (flags.length === 0 && status === 'jade') {
+    html += `<div class="sitrep-flag clear">
+      <span class="sitrep-icon">✓</span>
+      <span class="sitrep-text">NO ACTIVE INCIDENTS — UNIT NOMINAL</span>
+    </div>`;
+  }
+  if (laborPct > 30) {
+    html += `<div class="sitrep-flag critical">
+      <span class="sitrep-icon">⚠</span>
+      <span class="sitrep-text">LABOR CRITICAL: ${fmtPct(laborPct)} — ABOVE THRESHOLD</span>
+    </div>`;
+  } else if (laborPct > 24) {
+    html += `<div class="sitrep-flag warning">
+      <span class="sitrep-icon">△</span>
+      <span class="sitrep-text">LABOR ELEVATED: ${fmtPct(laborPct)} — MONITOR</span>
+    </div>`;
+  }
+  flags.forEach(f => {
+    const isWarn = /warn|elevat|above/i.test(f);
+    const isCrit = /critical|error|alert|breach/i.test(f);
+    const cls = isCrit ? 'critical' : isWarn ? 'warning' : 'warning';
+    const ico = isCrit ? '⚠' : '△';
+    html += `<div class="sitrep-flag ${cls}">
+      <span class="sitrep-icon">${ico}</span>
+      <span class="sitrep-text">${f.toUpperCase()}</span>
+    </div>`;
+  });
+  if (flags.length === 0 && status !== 'jade') {
+    html += `<div class="sitrep-flag clear">
+      <span class="sitrep-icon">✓</span>
+      <span class="sitrep-text">NO ADDITIONAL INCIDENTS</span>
+    </div>`;
+  }
+
+  // ── GUEST INTEL (Sunday data)
+  if (s && (s.avgRating || s.tipRate || s.adoption)) {
+    html += secDiv('GUEST INTEL');
+    if (s.avgRating) {
+      html += `<div class="tactical-row" style="gap:10px;">
+        <span class="tac-label">SATISFACTION</span>
+        <span class="star-row">${renderStars(s.avgRating)}</span>
+        <span class="tac-value" style="color:var(--gold-bright);">&nbsp;${s.avgRating.toFixed(2)}</span>
+      </div>`;
+    }
+    if (s.adoption) {
+      html += `<div class="tactical-row">
+        <span class="tac-label">ADOPTION</span>
+        ${asciiBar(Math.min(1, s.adoption / 100), 12, 'gold')}
+        <span class="tac-value">&nbsp;${fmtPct(s.adoption)}</span>
+      </div>`;
+    }
+    if (s.tipRate) {
+      html += `<div class="tactical-row">
+        <span class="tac-label">TIP RATE</span>
+        ${asciiBar(Math.min(1, s.tipRate / 30), 12, 'jade')}
+        <span class="tac-value">&nbsp;${fmtPct(s.tipRate)}</span>
+      </div>`;
+    }
+  }
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// DATA FETCH
+// ══════════════════════════════════════════════════════════════════════
+async function fetchData() {
+  try {
+    const res  = await fetch('/api/dashboard/all');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    // API returns { toast: { locations: [...] }, sunday: { locations: [...] }, ovation: {...} }
+    const locs = json?.toast?.locations || json?.locations || (Array.isArray(json) ? json : []);
+    locs.forEach(loc => { if (loc.name) DATA[loc.name] = loc; });
+    // Also store sunday data keyed by name
+    const sunLocs = json?.sunday?.locations || [];
+    sunLocs.forEach(s => {
+      if (s.name && DATA[s.name]) DATA[s.name]._sunday = s;
+      else if (s.name) DATA[s.name] = { _sunday: s };
+    });
+    OVATION = json?.ovation || null;
+    COMPANY = json?.toast?.companySummary || null;
+    SUNDAY_COMPANY = json?.sunday?.company || null;
+    return true;
+  } catch(e) {
+    console.warn('Data fetch failed:', e);
+    return false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// BOOT SEQUENCE
+// ══════════════════════════════════════════════════════════════════════
+(async function boot() {
+  startLoadAnim();
+  loadTarget = 30;
+
+  // Init map early (in background)
+  setTimeout(() => initMap(), 200);
+
+  loadTarget = 55;
+  const ok = await fetchData();
+  loadTarget = 85;
+
+  // Failsafe: 12s timeout
+  const failsafe = setTimeout(() => {
+    if (loadPct < 100) finishLoad();
+  }, 12000);
+
+  // Small pause for drama
+  await new Promise(r => setTimeout(r, 600));
+  loadTarget = 100;
+
+  // Render everything
+  renderMarkers();
+  renderUnitList();
+  updateKPIs();
+
+  clearTimeout(failsafe);
+  finishLoad();
+
+  // Auto-refresh every 60 seconds
+  setInterval(async () => {
+    const prevSelected = selectedLoc;
+    await fetchData();
+    renderMarkers();
+    renderUnitList();
+    updateKPIs();
+    if (prevSelected && DATA[prevSelected]) {
+      const loc = DATA[prevSelected];
+      buildPanelContent(loc, getStatus(loc));
+    }
+  }, 60000);
+})();
+
+</script>
+</body>
+</html>
